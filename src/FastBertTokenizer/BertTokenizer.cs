@@ -15,6 +15,12 @@ public class BertTokenizer
     private int _sepId;
     private int _padId;
 
+    public async Task LoadVocabularyAsync(string vocabFilePath, bool casedVocabulary, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]")
+    {
+        using var sr = new StreamReader(vocabFilePath);
+        await LoadVocabularyAsync(sr, casedVocabulary, unknownToken, clsToken, sepToken, padToken);
+    }
+
     public async Task LoadVocabularyAsync(TextReader vocabFile, bool casedVocabulary, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]")
     {
         _ = vocabFile ?? throw new ArgumentNullException(nameof(vocabFile));
@@ -98,6 +104,7 @@ public class BertTokenizer
 
         inputIds[inputIdCnt] = _sepId;
         inputIdCnt++;
+        var nonPaddedCnt = inputIdCnt;
 
         if (padTo is int padLen && padLen > inputIdCnt)
         {
@@ -107,14 +114,10 @@ public class BertTokenizer
 
         var attM = new long[inputIdCnt];
         var tokTypI = new long[inputIdCnt];
-        Array.Fill(attM, 1);
+        Array.Fill(attM, 1, 0, nonPaddedCnt - 1);
+        Array.Fill(attM, 1, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
         Array.Fill(tokTypI, 0);
         return (inputIds.AsMemory(0, inputIdCnt), attM, tokTypI);
-    }
-
-    public Task<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> TokenizeAsync(string input, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(Tokenize(input.AsSpan()));
     }
 
     private int TokenizeSubword(ReadOnlySpan<char> word, Span<long> tokenIdSink)
@@ -150,6 +153,7 @@ public class BertTokenizer
         {
             var suffix = remaining;
             id = -1;
+
             // ToDo: Remove string allocation; related: https://github.com/dotnet/runtime/issues/27229
             while (suffix.Length > 0)
             {
