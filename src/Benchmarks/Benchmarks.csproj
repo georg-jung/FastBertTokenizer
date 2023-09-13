@@ -10,6 +10,17 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" />
+    <PackageReference Include="BERTTokenizers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FastBertTokenizer\FastBertTokenizer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Vocabularies\baai-bge-small-en-vocab.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
