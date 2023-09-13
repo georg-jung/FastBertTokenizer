@@ -1,6 +1,9 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+using System.Text;
+
 namespace FastBertTokenizer;
 
 /// <summary>
@@ -34,8 +37,9 @@ public class BertTokenizer
             throw new InvalidOperationException("Vocabulary already loaded.");
         }
 
-        _prefixes = new Dictionary<string, int>(casedVocabulary ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
-        _suffixes = new Dictionary<string, int>(casedVocabulary ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
+        UpperCollisionSolvingComparer? comparer = casedVocabulary ? null : new();
+        _prefixes = new Dictionary<string, int>(casedVocabulary ? StringComparer.Ordinal : comparer); // StringComparer.OrdinalIgnoreCase);
+        _suffixes = new Dictionary<string, int>(casedVocabulary ? StringComparer.Ordinal : comparer); //StringComparer.OrdinalIgnoreCase);
         (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
         var i = 0;
         while (await vocabFile.ReadLineAsync() is string line)
@@ -44,7 +48,7 @@ public class BertTokenizer
             {
                 if (line.StartsWith("##", StringComparison.Ordinal))
                 {
-                    _suffixes[line[2..]] = i;
+                    _suffixes[line[2..].Normalize()] = i;
                 }
                 else if (line.Equals(unknownToken, StringComparison.Ordinal))
                 {
@@ -64,7 +68,7 @@ public class BertTokenizer
                 }
                 else
                 {
-                    _prefixes[line] = i;
+                    _prefixes[line.Normalize()] = i;
                 }
             }
 
@@ -92,9 +96,8 @@ public class BertTokenizer
             var added = TokenizeSubword(word, inputIds.AsSpan(inputIdCnt, inputIds.Length - inputIdCnt));
             if (inputIdCnt + added + 1 > maximumTokens)
             {
-                // don't add partial words for now.
-                // ToDo: Optimize performance
-                // inputIds.AddRange(subwordIds.Take(maximumTokens - inputIds.Count - 1));
+                // HuggingFace tokenizer does add partial words.
+                inputIdCnt = maximumTokens - 1; // leave one out for the final [SEP] token
                 return false;
             }
 
@@ -114,14 +117,163 @@ public class BertTokenizer
 
         var attM = new long[inputIdCnt];
         var tokTypI = new long[inputIdCnt];
-        Array.Fill(attM, 1, 0, nonPaddedCnt - 1);
+        Array.Fill(attM, 1, 0, nonPaddedCnt);
         Array.Fill(attM, 1, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
         Array.Fill(tokTypI, 0);
         return (inputIds.AsMemory(0, inputIdCnt), attM, tokTypI);
     }
 
+    /// <summary>
+    /// Inspired by https://github.com/huggingface/transformers/blob/7db1ad63d9a9a8f705e13d68f90269df78a16df5/src/transformers/tokenization_utils.py#L280.
+    /// We don't filter \t, \r, \n because splitting by whitespace was already done.
+    /// As per https://en.wikipedia.org/wiki/Unicode_character_property#General_Category, Control, Format, Surrogate, PrivateUse and OtherNotAssigned
+    /// are all categories starting with "C".
+    /// </summary>
+    /// <param name="text">Text to remove special unicode chars from.</param>
+    /// <param name="cleaned">Contains the cleaned text.</param>
+    /// <returns>True if characters were removed.</returns>
+    private static bool RemoveControlAndReplacement(ReadOnlySpan<char> text, out ReadOnlySpan<char> cleaned)
+    {
+        bool NeedsRemoval(ReadOnlySpan<char> text)
+        {
+            foreach (Rune r in text.EnumerateRunes())
+            {
+                if (r.Value == 0xFFFD)
+                {
+                    return true;
+                }
+
+                var cat = Rune.GetUnicodeCategory(r);
+                switch (cat)
+                {
+                    case UnicodeCategory.Control:
+                    case UnicodeCategory.Format:
+                    case UnicodeCategory.Surrogate:
+                    case UnicodeCategory.PrivateUse:
+                    case UnicodeCategory.OtherNotAssigned:
+                        return true;
+                    default:
+                        break;
+                }
+            }
+
+            return false;
+        }
+
+        if (!NeedsRemoval(text))
+        {
+            cleaned = text;
+            return false;
+        }
+
+        int i = 0;
+        Span<char> span = new char[text.Length];
+
+        foreach (Rune r in text.EnumerateRunes())
+        {
+            if (r.Value == 0xFFFD)
+            {
+                continue;
+            }
+
+            switch (Rune.GetUnicodeCategory(r))
+            {
+                case UnicodeCategory.Control:
+                case UnicodeCategory.Format:
+                case UnicodeCategory.Surrogate:
+                case UnicodeCategory.PrivateUse:
+                case UnicodeCategory.OtherNotAssigned:
+                    break;
+                default:
+                    r.EncodeToUtf16(span.Slice(i++));
+                    if (!r.IsBmp)
+                    {
+                        i++;
+                    }
+
+                    break;
+            }
+        }
+
+        cleaned = span.Slice(0, i);
+        return true;
+    }
+
+    /// <summary>
+    /// Source: https://stackoverflow.com/a/67190157/1200847.
+    /// Similar to what HuggingFace tokenizer does in _run_strip_accents:
+    /// https://github.com/huggingface/transformers/blob/7db1ad63d9a9a8f705e13d68f90269df78a16df5/src/transformers/models/bert/tokenization_bert.py#L449.
+    /// </summary>
+    /// <param name="text">String to remove diacritics from.</param>
+    /// <returns>String without diacritics.</returns>
+    private static string RemoveDiacritics(string text)
+    {
+        bool NeedsRemoval(ReadOnlySpan<char> formD)
+        {
+            foreach (char c in formD)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        ReadOnlySpan<char> normalizedString = text.Normalize(NormalizationForm.FormD);
+
+        if (!NeedsRemoval(normalizedString))
+        {
+            return text;
+        }
+
+        int i = 0;
+        Span<char> span = normalizedString.Length < 1000
+            ? stackalloc char[normalizedString.Length]
+            : new char[normalizedString.Length];
+
+        foreach (char c in normalizedString)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            {
+                span[i++] = c;
+            }
+        }
+
+        return new string(span.Slice(0, i)).Normalize(NormalizationForm.FormC);
+    }
+
     private int TokenizeSubword(ReadOnlySpan<char> word, Span<long> tokenIdSink)
     {
+        int OnUnknown(ReadOnlySpan<char> word, Span<long> tokenIdSink)
+        {
+            if (RemoveControlAndReplacement(word, out var withoutControl))
+            {
+                if (withoutControl.Length == 0)
+                {
+                    return 0;
+                }
+
+                return TokenizeSubword(withoutControl, tokenIdSink);
+            }
+
+            var withoutDiacrit = RemoveDiacritics(word.ToString());
+            if (!MemoryExtensions.Equals(withoutDiacrit, word, StringComparison.Ordinal))
+            {
+                return TokenizeSubword(withoutDiacrit.AsSpan(), tokenIdSink);
+            }
+
+            var formD = withoutDiacrit.Normalize(NormalizationForm.FormD);
+            if (!MemoryExtensions.Equals(formD, word, StringComparison.Ordinal))
+            {
+                return TokenizeSubword(formD.AsSpan(), tokenIdSink);
+            }
+
+            tokenIdSink[0] = _unkId;
+            return 1;
+        }
+
         // No null checks for _prefixes and _suffixes because this is a private method.
         var prefix = word;
         var cnt = 0;
@@ -141,8 +293,7 @@ public class BertTokenizer
 
         if (id == -1)
         {
-            tokenIdSink[0] = _unkId;
-            return 1;
+            return OnUnknown(word, tokenIdSink);
         }
 
         tokenIdSink[0] = id;
@@ -168,8 +319,7 @@ public class BertTokenizer
 
             if (id == -1)
             {
-                tokenIdSink[0] = _unkId;
-                return 1;
+                return OnUnknown(word, tokenIdSink);
             }
 
             tokenIdSink[cnt] = id;
