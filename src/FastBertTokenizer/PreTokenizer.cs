@@ -23,20 +23,22 @@ public class PreTokenizer
     public static void PreTokenize(ReadOnlySpan<char> input, ReadOnlySpanFunc<char> processToken)
     {
         var start = -1;
-        for (var i = 0; i < input.Length; i++)
-        {
-            bool Flush(ReadOnlySpan<char> input)
-            {
-                if (start != -1)
-                {
-                    var ret = processToken(input.Slice(start, i - start));
-                    start = -1;
-                    return ret;
-                }
+        int i;
 
-                return true;
+        bool Flush(ReadOnlySpan<char> input)
+        {
+            if (start != -1)
+            {
+                var ret = processToken(input.Slice(start, i - start));
+                start = -1;
+                return ret;
             }
 
+            return true;
+        }
+
+        for (i = 0; i < input.Length; i++)
+        {
             var c = input[i];
             if (char.IsWhiteSpace(c))
             {
@@ -60,5 +62,7 @@ public class PreTokenizer
                 }
             }
         }
+
+        Flush(input);
     }
 }
