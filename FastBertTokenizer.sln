@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks", "src\Benchmarks\Benchmarks.csproj", "{BC7F71FB-6434-4D25-888B-9F5A8D1D8C42}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastBertTokenizer", "src\FastBertTokenizer\FastBertTokenizer.csproj", "{AAF7115E-1ABD-465D-8E93-C01F9CA57A33}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "RestHuggingfaceTokenizer", "src\RestHuggingfaceTokenizer\RestHuggingfaceTokenizer.pyproj", "{8B2FBC6B-8422-4BB4-9249-93884CB52A4E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BC7F71FB-6434-4D25-888B-9F5A8D1D8C42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC7F71FB-6434-4D25-888B-9F5A8D1D8C42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC7F71FB-6434-4D25-888B-9F5A8D1D8C42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC7F71FB-6434-4D25-888B-9F5A8D1D8C42}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAF7115E-1ABD-465D-8E93-C01F9CA57A33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAF7115E-1ABD-465D-8E93-C01F9CA57A33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAF7115E-1ABD-465D-8E93-C01F9CA57A33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAF7115E-1ABD-465D-8E93-C01F9CA57A33}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B2FBC6B-8422-4BB4-9249-93884CB52A4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B2FBC6B-8422-4BB4-9249-93884CB52A4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
