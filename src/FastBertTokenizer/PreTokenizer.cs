@@ -2,17 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+using System.Runtime.CompilerServices;
 
 namespace FastBertTokenizer;
 
 public class PreTokenizer
 {
-    /* https://github.com/NMZivkovic/BertTokenizers defines the following punctuation:
-     * ".,;:\\/?!#$%()=+-*\"'–_`<>&^@{}[]|~'".ToArray()
-     */
-
-    private static char[] morePunctuation = "$=+`<>^|~".ToArray();
-
     public delegate bool ReadOnlySpanFunc<T>(ReadOnlySpan<T> span);
 
     /// <summary>
@@ -20,7 +15,8 @@ public class PreTokenizer
     /// </summary>
     /// <param name="input">Input to pre-tokenize.</param>
     /// <param name="processToken">A function to process the next token. Pre-tokenization is stopped as soon as the function returns false.</param>
-    public static void PreTokenize(ReadOnlySpan<char> input, ReadOnlySpanFunc<char> processToken)
+    /// <param name="convertToLowercase">Convert word tokens to lowercase before further processing.</param>
+    public static void PreTokenize(ReadOnlySpan<char> input, ReadOnlySpanFunc<char> processToken, bool convertToLowercase)
     {
         var start = -1;
         int i;
@@ -29,9 +25,20 @@ public class PreTokenizer
         {
             if (start != -1)
             {
-                var ret = processToken(input.Slice(start, i - start));
+                var toProcess = input.Slice(start, i - start);
                 start = -1;
-                return ret;
+                if (convertToLowercase)
+                {
+                    Span<char> span = toProcess.Length < 1000
+                        ? stackalloc char[toProcess.Length]
+                        : new char[toProcess.Length];
+                    toProcess.ToLowerInvariant(span);
+                    return processToken(span);
+                }
+                else
+                {
+                    return processToken(toProcess);
+                }
             }
 
             return true;
@@ -44,7 +51,6 @@ public class PreTokenizer
             // HuggingFace tokenizer would remove 0xFFFD (REPLACEMENT CHARACTER) and control chars here.
             // That would require us to allocate memory, which we don't want to do.
             // https://github.com/huggingface/transformers/blob/7db1ad63d9a9a8f705e13d68f90269df78a16df5/src/transformers/models/bert/tokenization_bert.py#L519
-
             if (char.IsWhiteSpace(c))
             {
                 if (!Flush(input))
@@ -52,7 +58,7 @@ public class PreTokenizer
                     return;
                 }
             }
-            else if (char.IsPunctuation(c) || Array.IndexOf(morePunctuation, c) != -1 || IsChineseCharacter(c))
+            else if (IsPunctuation(c) || IsChineseCharacter(c))
             {
                 if (!Flush(input) || !processToken(input.Slice(i, 1)))
                 {
@@ -71,11 +77,34 @@ public class PreTokenizer
         Flush(input);
     }
 
+    // AggressiveInlining the methods below does seem to provide a performance boost in the 2-6% ballpark of the overall tokenizer.
+
+    /// <summary>
+    /// Translated from https://github.com/huggingface/transformers/blob/05de038f3d249ce96740885f85fd8d0aa00c29bc/src/transformers/tokenization_utils.py#L292-L304.
+    /// </summary>
+    /// <param name="cp">Character to check.</param>
+    /// <returns>True we consider the character a punctuation character, otherwise false.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsPunctuation(char cp)
+    {
+        // We treat all non-letter/number ASCII as punctuation.
+        // Characters such as "^", "$", and "`" are not in the Unicode
+        // Punctuation class but we treat them as punctuation anyways, for
+        // consistency.
+        if ((cp >= 33 && cp <= 47) || (cp >= 58 && cp <= 64) || (cp >= 91 && cp <= 96) || (cp >= 123 && cp <= 126))
+        {
+            return true;
+        }
+
+        return char.IsPunctuation(cp);
+    }
+
     /// <summary>
     /// Tranlated from https://github.com/huggingface/transformers/blob/32ec7345f2d752c294ddf5aff495b657c9cd9d3b/src/transformers/models/bert/tokenization_bert.py#L495-L517.
     /// </summary>
     /// <param name="cp">Char to check.</param>
     /// <returns>True if passed char is a chinese char.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsChineseCharacter(char cp)
     {
         // This defines a "chinese character" as anything in the CJK Unicode block:

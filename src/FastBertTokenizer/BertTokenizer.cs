@@ -17,14 +17,32 @@ public class BertTokenizer
     private int _clsId;
     private int _sepId;
     private int _padId;
+    private bool _lowercaseInput;
 
-    public async Task LoadVocabularyAsync(string vocabFilePath, bool casedVocabulary, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]")
+    public async Task LoadVocabularyAsync(string vocabFilePath, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]")
     {
         using var sr = new StreamReader(vocabFilePath);
-        await LoadVocabularyAsync(sr, casedVocabulary, unknownToken, clsToken, sepToken, padToken);
+        await LoadVocabularyAsync(sr, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken);
     }
 
-    public async Task LoadVocabularyAsync(TextReader vocabFile, bool casedVocabulary, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]")
+    /// <summary>
+    /// Load a vocab.txt file that assigns an id to each token based on the line number.
+    /// </summary>
+    /// <param name="vocabFile">Path to the vocab.txt file.</param>
+    /// <param name="convertInputToLowercase">
+    /// Convert tokenization inputs to lowercase before encoding using this vocabulary?
+    /// Set to true when using an uncased model, false when using a cased model.
+    /// Can be set to false when using an uncased model if the input is already lowercased, which might
+    /// lead to a performance gain in the 5% ballpark (lowercasing is non-allocating nonetheless).
+    /// </param>
+    /// <param name="unknownToken">Special token for unkown, e.g. [UNK].</param>
+    /// <param name="clsToken">Special token for cls/sequence start, e.g. [CLS].</param>
+    /// <param name="sepToken">Special token for sperator, e.g. [SEP].</param>
+    /// <param name="padToken">Special token for padding, e.g. [PAD].</param>
+    /// <returns>A task that represents the loading operation.</returns>
+    /// <exception cref="ArgumentNullException">If one of the requred arguments is null.</exception>
+    /// <exception cref="InvalidOperationException">If a vocabulary is already loaded.</exception>
+    public async Task LoadVocabularyAsync(TextReader vocabFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]")
     {
         _ = vocabFile ?? throw new ArgumentNullException(nameof(vocabFile));
         _ = unknownToken ?? throw new ArgumentNullException(nameof(unknownToken));
@@ -37,9 +55,8 @@ public class BertTokenizer
             throw new InvalidOperationException("Vocabulary already loaded.");
         }
 
-        UpperCollisionSolvingComparer? comparer = casedVocabulary ? null : new();
-        _prefixes = new Dictionary<string, int>(casedVocabulary ? StringComparer.Ordinal : comparer); // StringComparer.OrdinalIgnoreCase);
-        _suffixes = new Dictionary<string, int>(casedVocabulary ? StringComparer.Ordinal : comparer); //StringComparer.OrdinalIgnoreCase);
+        _prefixes = new Dictionary<string, int>(StringComparer.Ordinal);
+        _suffixes = new Dictionary<string, int>(StringComparer.Ordinal);
         (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
         var i = 0;
         while (await vocabFile.ReadLineAsync() is string line)
@@ -75,6 +92,7 @@ public class BertTokenizer
             i++;
         }
 
+        _lowercaseInput = convertInputToLowercase;
         _unkId = unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unknownToken}.");
         _clsId = clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}.");
         _sepId = sepId ?? throw new InvalidOperationException($"Vocabulary does not contain sep token {sepToken}.");
@@ -89,7 +107,7 @@ public class BertTokenizer
         var inputIdCnt = 1;
         var inputIds = new long[maximumTokens];
         inputIds[0] = _clsId;
-        PreTokenizer.PreTokenize(input, OnWordToken);
+        PreTokenizer.PreTokenize(input, OnWordToken, _lowercaseInput);
 
         bool OnWordToken(ReadOnlySpan<char> word)
         {
