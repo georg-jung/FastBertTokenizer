@@ -10,9 +10,11 @@ using FastBertTokenizer;
 namespace Benchmarks;
 
 [MemoryDiagnoser]
-//[PerfCollectProfiler(performExtraBenchmarksRun: false)]
-//[EtwProfiler(performExtraBenchmarksRun: false)]
-//[EventPipeProfiler(EventPipeProfile.CpuSampling)] // for speedscope files
+/*
+[PerfCollectProfiler(performExtraBenchmarksRun: false)]
+[EtwProfiler(performExtraBenchmarksRun: false)]
+[EventPipeProfiler(EventPipeProfile.CpuSampling)] // for speedscope files
+*/
 public class TokenizeSpeed
 {
     private readonly List<string> _corpus;
@@ -29,12 +31,12 @@ public class TokenizeSpeed
     {
         var files = Directory.GetFiles(corpusFolder);
         _corpus = new(files.Length);
-        foreach (var file in files.Take(5000))
+        foreach (var file in files)
         {
             var tx = File.ReadAllText(file);
             tx = tx.Substring(0, Math.Min(tx.Length, 8000)); // other lib throw if text is too long
-            //tx = Regex.Replace(tx, @"\s+", " "); // required due to bad whitespace processing of other lib
-            //tx = Regex.Replace(tx, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters
+            /* tx = Regex.Replace(tx, @"\s+", " "); // required due to bad whitespace processing of other lib
+            tx = Regex.Replace(tx, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters */
             _corpus.Add(tx);
         }
 
@@ -45,7 +47,7 @@ public class TokenizeSpeed
         _maxSequenceLength = maxSequenceLength;
     }
 
-    //[Benchmark]
+    [Benchmark]
     public IReadOnlyCollection<object> OtherLib()
     {
         List<object> res = new(_corpus.Count);
@@ -57,7 +59,7 @@ public class TokenizeSpeed
         return res;
     }
 
-    [Benchmark]
+    // [Benchmark]
     public IReadOnlyCollection<object> FastBertTokenizerAllocating()
     {
         List<object> res = new(_corpus.Count);
