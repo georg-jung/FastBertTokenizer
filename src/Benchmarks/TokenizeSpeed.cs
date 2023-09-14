@@ -17,6 +17,7 @@ namespace Benchmarks;
 */
 public class TokenizeSpeed
 {
+    private static (List<string> Corpus, int MaxLen)? _cache;
     private readonly List<string> _corpus;
     private readonly ConcreteUncasedTokenizer _otherLibTokenizer;
     private readonly BertTokenizer _tokenizer;
@@ -29,15 +30,23 @@ public class TokenizeSpeed
 
     public TokenizeSpeed(string corpusFolder, string vocabTxtFile, int maxSequenceLength)
     {
-        var files = Directory.GetFiles(corpusFolder);
-        _corpus = new(files.Length);
-        foreach (var file in files)
+        if (_cache is { } cache)
         {
-            var tx = File.ReadAllText(file);
-            tx = tx.Substring(0, Math.Min(tx.Length, 8000)); // other lib throw if text is too long
-            /* tx = Regex.Replace(tx, @"\s+", " "); // required due to bad whitespace processing of other lib
-            tx = Regex.Replace(tx, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters */
-            _corpus.Add(tx);
+            _corpus = cache.Corpus;
+            _maxSequenceLength = cache.MaxLen;
+        }
+        else
+        {
+            var files = Directory.GetFiles(corpusFolder);
+            _corpus = new(files.Length);
+            foreach (var file in files)
+            {
+                var tx = File.ReadAllText(file);
+                tx = tx.Substring(0, Math.Min(tx.Length, 5000)); // other lib throw if text is too long
+                tx = Regex.Replace(tx, @"\s+", " "); // required due to bad whitespace processing of other lib
+                tx = Regex.Replace(tx, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters */
+                _corpus.Add(tx);
+            }
         }
 
         _otherLibTokenizer = new(vocabTxtFile);
@@ -59,7 +68,7 @@ public class TokenizeSpeed
         return res;
     }
 
-    // [Benchmark]
+    [Benchmark]
     public IReadOnlyCollection<object> FastBertTokenizerAllocating()
     {
         List<object> res = new(_corpus.Count);
