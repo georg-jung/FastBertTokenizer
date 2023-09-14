@@ -13,7 +13,7 @@ namespace FastBertTokenizer.Tests
 
         public CompareToHuggingfaceTokenizer()
         {
-            _underTest.LoadVocabularyAsync("Vocabularies/baai-bge-small-en-vocab.txt", false).GetAwaiter().GetResult();
+            _underTest.LoadVocabularyAsync("Vocabularies/baai-bge-small-en-vocab.txt", true).GetAwaiter().GetResult();
         }
 
         [Fact]
