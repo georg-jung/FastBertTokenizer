@@ -3,12 +3,16 @@
 
 using System.Text.RegularExpressions;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Diagnosers;
 using BERTTokenizers.Base;
 using FastBertTokenizer;
 
 namespace Benchmarks;
 
 [MemoryDiagnoser]
+//[PerfCollectProfiler(performExtraBenchmarksRun: false)]
+//[EtwProfiler(performExtraBenchmarksRun: false)]
+//[EventPipeProfiler(EventPipeProfile.CpuSampling)] // for speedscope files
 public class TokenizeSpeed
 {
     private readonly List<string> _corpus;
