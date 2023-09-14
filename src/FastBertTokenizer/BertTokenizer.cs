@@ -253,7 +253,14 @@ public class BertTokenizer
 
         foreach (char c in normalizedString)
         {
-            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            var cat = CharUnicodeInfo.GetUnicodeCategory(c);
+
+            // ToLowerInvariant performed by pre-tokenizer does not lower all chars with diacrits.
+            if (cat == UnicodeCategory.UppercaseLetter || cat == UnicodeCategory.TitlecaseLetter)
+            {
+                span[i++] = char.ToLowerInvariant(c);
+            }
+            else if (cat != UnicodeCategory.NonSpacingMark)
             {
                 span[i++] = c;
             }
