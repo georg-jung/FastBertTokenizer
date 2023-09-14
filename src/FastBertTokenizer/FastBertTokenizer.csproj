@@ -6,4 +6,18 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>FastBertTokenizer</PackageId>
+    <RootNamespace>FastBertTokenizer</RootNamespace>
+    <AssemblyName>FastBertTokenizer</AssemblyName>
+    <Authors>Georg Jung</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <PackageTags>bert;tokenizer;wordpiece;llm;semantic-kernel;performance;ai;artificial-intelligence;ml;machine-learning</PackageTags>
+    <PackageProjectUrl>https://github.com/georg-jung/FastBertTokenizer</PackageProjectUrl>
+    <PackageDescription>
+Fast and memory-efficient WordPiece tokenizer as it is used by BERT and others. Tokenizes text for further processing using NLP/language models.
+    </PackageDescription>
+  </PropertyGroup>
+
 </Project>
