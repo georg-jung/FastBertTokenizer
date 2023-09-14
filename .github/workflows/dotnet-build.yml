@@ -31,5 +31,5 @@ jobs:
     - run: dotnet pack -c Release --no-restore
     - uses: actions/upload-artifact@v3
       with:
-        name: nupkg
+        name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.Version }}
         path: bin/Packages/Release/**/*
