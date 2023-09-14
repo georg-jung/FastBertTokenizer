@@ -27,8 +27,8 @@ Console.WriteLine(string.Join(", ", inputIds.ToArray().Select(x => x.ToString())
 
 For correctness verification about 10.000 articles of [simple english Wikipedia](https://simple.wikipedia.org/wiki/Main_Page) were tokenized using FastBertTokenizer and Huggingface using the [baai bge vocab.txt](https://huggingface.co/BAAI/bge-small-en/blob/main/vocab.txt) file. The tokenization results were exactly the same apart from these two cases:
 
-* `Letter` (id 6309) contains assamese characters. Many of them are not represented in the vocabulary used. Huggingface's tokenizer skips exactly one [UNK] token for one of the chars were *FastBertTokenizer* emits one.
-* `Avignon` (id 30153) has Rhône as the last word before hitting the 512 token id limit. If a word can not directly be found in the vocabulary, *FastBertTokenizer* we tries to tokenize prefixes of the word first, while Huggingface directly starts with a diacritic-free version of the word. Thus, *FastBertTokenizer*'s result ends with token id for `r` while huggingface (correctly) emits `rhone`. This edge case is just relevant
+* [*Letter*](https://simple.wikipedia.org/wiki/Letter) (id 6309) contains assamese characters. Many of them are not represented in the vocabulary used. Huggingface's tokenizer skips exactly one [UNK] token for one of the chars were *FastBertTokenizer* emits one.
+* [*Avignon*](https://simple.wikipedia.org/wiki/Avignon) (id 30153) has Rhône as the last word before hitting the 512 token id limit. If a word can not directly be found in the vocabulary, *FastBertTokenizer* we tries to tokenize prefixes of the word first, while Huggingface directly starts with a diacritic-free version of the word. Thus, *FastBertTokenizer*'s result ends with token id for `r` while huggingface (correctly) emits `rhone`. This edge case is just relevant
     1. for the last word, after which the tokenized output is cut off and
     2. if this last word contains diacritics.
 
@@ -44,7 +44,7 @@ These minor differences might be irrelevant in most real-world use cases. All ot
 * handles unicode control chars
 * handles other alphabets such as greek and right-to-left languages
 
-Note that while [BERTTokenizers handles token type incorrectly](https://github.com/NMZivkovic/BertTokenizers/issues/18), it does support input of to pieces of text that are tokenized with a separator in between. *FastBertTokenizer* currently does not support this.
+Note that while [BERTTokenizers handles token type incorrectly](https://github.com/NMZivkovic/BertTokenizers/issues/18), it does support input of two pieces of text that are tokenized with a separator in between. *FastBertTokenizer* currently does not support this.
 
 ## Benchmark
 
