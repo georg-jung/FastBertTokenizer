@@ -4,16 +4,34 @@ A fast and memory-efficient library for WordPiece tokenization as it is used by 
 
 Serves similar needs and initially inspired by [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers) - thanks for the great work.
 
+## Features
+
+* same results as [HuggingFace Transformers' `AutoTokenizer`](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer) in all relevant cases.
+* purely managed and dependency-free
+* optimized for high performance and low memory usage
+
+## Comparison of Tokenization Results to [HuggingFace Transformers' `AutoTokenizer`](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer)
+
+For correctness verification about 10.000 articles of [simple english Wikipedia](https://simple.wikipedia.org/wiki/Main_Page) were tokenized using FastBertTokenizer and Huggingface using the [baai bge vocab.txt](https://huggingface.co/BAAI/bge-small-en/blob/main/vocab.txt) file. The tokenization results were exactly the same apart from these two cases:
+
+* `Letter` (id 6309) contains assamese characters. Many of them are not represented in the vocabulary used. Huggingface's tokenizer skips exactly one [UNK] token for one of the chars were *FastBertTokenizer* emits one.
+* `Avignon` (id 30153) has Rhône as the last word before hitting the 512 token id limit. If a word can not directly be found in the vocabulary, *FastBertTokenizer* we tries to tokenize prefixes of the word first, while Huggingface directly starts with a diacritic-free version of the word. Thus, *FastBertTokenizer*'s result ends with token id for `r` while huggingface (correctly) emits `rhone`. This edge case is just relevant
+    1. for the last word, after which the tokenized output is cut off and
+    2. if this last word contains diacritics.
+
+These minor differences might be irrelevant in most real-world use cases. All other tested >10.000 articles including chinese and korean characters as well as much less common scripts and right-to-left letters were tokenized exactly the same as by Huggingface's Tokenizer.
+
 ## Comparison to [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers)
 
 * about 1 order of magnitude faster
-* allocates more then 1 order of magnitude less memory
+* allocates more than 1 order of magnitude less memory
 * [better whitespace handling](https://github.com/NMZivkovic/BertTokenizers/issues/24)
 * [handles unknown characters correctly](https://github.com/NMZivkovic/BertTokenizers/issues/26)
 * [does not throw if text is longer than maximum sequence length](https://github.com/NMZivkovic/BertTokenizers/issues/18)
-* While [BERTTokenizers handles token type incorrectly](https://github.com/NMZivkovic/BertTokenizers/issues/18), it does support input of to pieces of text that are tokenized with a separator in between. FastBertTokenizer currently does not support this.
 * handles unicode control chars
 * handles other alphabets such as greek and right-to-left languages
+
+Note that while [BERTTokenizers handles token type incorrectly](https://github.com/NMZivkovic/BertTokenizers/issues/18), it does support input of to pieces of text that are tokenized with a separator in between. *FastBertTokenizer* currently does not support this.
 
 ## Benchmark
 
