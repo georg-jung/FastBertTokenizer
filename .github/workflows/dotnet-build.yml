@@ -1,0 +1,35 @@
+name: dotnet build
+
+on:
+  workflow_call:
+    inputs:
+      build-ref:
+        required: true
+        type: string
+  workflow_dispatch:
+  push:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+        lfs: true
+    - uses: dotnet/nbgv@v0.4
+      id: nbgv
+    - run: dotnet restore
+    - run: dotnet build -c Release --no-restore
+    - run: dotnet pack -c Release --no-restore
+    - uses: actions/upload-artifact@v3
+      with:
+        name: nupkg
+        path: bin/Packages/Release/**/*
