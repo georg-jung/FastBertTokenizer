@@ -9,14 +9,15 @@ namespace FastBertTokenizer;
 /// <summary>
 /// How attention_mask, input_ids and token_type_ids are created: https://huggingface.co/transformers/v3.2.0/glossary.html.
 /// </summary>
-public class BertTokenizer
+[System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1204:Static elements should appear before instance elements", Justification = "Have private overload close to public one.")]
+public partial class BertTokenizer
 {
-    private Dictionary<string, int>? _prefixes;
-    private Dictionary<string, int>? _suffixes;
-    private int _unkId;
-    private int _clsId;
-    private int _sepId;
-    private int _padId;
+    private Dictionary<string, long>? _prefixes;
+    private Dictionary<string, long>? _suffixes;
+    private (int Id, string Token) _unk = default!;
+    private (int Id, string Token) _cls = default!;
+    private (int Id, string Token) _sep = default!;
+    private (int Id, string Token) _pad = default!;
     private bool _lowercaseInput;
 
     public async Task LoadVocabularyAsync(string vocabFilePath, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]")
@@ -55,8 +56,8 @@ public class BertTokenizer
             throw new InvalidOperationException("Vocabulary already loaded.");
         }
 
-        _prefixes = new Dictionary<string, int>(StringComparer.Ordinal);
-        _suffixes = new Dictionary<string, int>(StringComparer.Ordinal);
+        _prefixes = new Dictionary<string, long>(StringComparer.Ordinal);
+        _suffixes = new Dictionary<string, long>(StringComparer.Ordinal);
         (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
         var i = 0;
         while (await vocabFile.ReadLineAsync() is string line)
@@ -93,25 +94,55 @@ public class BertTokenizer
         }
 
         _lowercaseInput = convertInputToLowercase;
-        _unkId = unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unknownToken}.");
-        _clsId = clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}.");
-        _sepId = sepId ?? throw new InvalidOperationException($"Vocabulary does not contain sep token {sepToken}.");
-        _padId = padId ?? throw new InvalidOperationException($"Vocabulary does not contain pad token {padToken}.");
+        _unk = (unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unknownToken}."), unknownToken);
+        _cls = (clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}."), clsToken);
+        _sep = (sepId ?? throw new InvalidOperationException($"Vocabulary does not contain sep token {sepToken}."), sepToken);
+        _pad = (padId ?? throw new InvalidOperationException($"Vocabulary does not contain pad token {padToken}."), padToken);
+    }
+
+    public int Tokenize(ReadOnlySpan<char> input, Memory<long> inputIds, Span<long> attentionMask, Span<long> tokenTypeIds, int? padTo = null)
+    {
+        var inputIdCnt = Tokenize(input, inputIds, attentionMask, padTo);
+        tokenTypeIds.Slice(0, inputIdCnt).Fill(0);
+
+        return inputIdCnt;
+    }
+
+    public int Tokenize(ReadOnlySpan<char> input, Memory<long> inputIds, Span<long> attentionMask, int? padTo = null)
+    {
+        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, inputIds, padTo);
+        attentionMask.Slice(0, nonPaddedCnt).Fill(1);
+        attentionMask.Slice(nonPaddedCnt, inputIdCnt - nonPaddedCnt).Fill(0);
+        return inputIdCnt;
     }
 
     public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) Tokenize(ReadOnlySpan<char> input, int maximumTokens = 512, int? padTo = null)
     {
+        var inputIds = new long[maximumTokens];
+        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, inputIds, padTo);
+        var attM = new long[inputIdCnt];
+        var tokTypI = new long[inputIdCnt];
+        Array.Fill(attM, 1, 0, nonPaddedCnt);
+        Array.Fill(attM, 1, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
+        Array.Fill(tokTypI, 0);
+        return (inputIds.AsMemory(0, inputIdCnt), attM, tokTypI);
+    }
+
+    private (int Length, int NonPadding) Tokenize(ReadOnlySpan<char> input, Memory<long> inputIds, int? padTo = null)
+    {
         _ = _prefixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
 
+        var inputIdsSpan = inputIds.Span;
+        var maximumTokens = inputIds.Length;
         var inputIdCnt = 1;
-        var inputIds = new long[maximumTokens];
-        inputIds[0] = _clsId;
+        inputIdsSpan[0] = _cls.Id;
         PreTokenizer.PreTokenize(input, OnWordToken, _lowercaseInput);
 
         bool OnWordToken(ReadOnlySpan<char> word)
         {
-            var added = TokenizeSubword(word, inputIds.AsSpan(inputIdCnt, inputIds.Length - inputIdCnt));
+            var span = inputIds.Span;
+            var added = TokenizeSubword(word, span.Slice(inputIdCnt, span.Length - inputIdCnt));
             if (inputIdCnt + added + 1 > maximumTokens)
             {
                 // HuggingFace tokenizer does add partial words.
@@ -123,22 +154,17 @@ public class BertTokenizer
             return inputIdCnt + 1 < maximumTokens;
         }
 
-        inputIds[inputIdCnt] = _sepId;
+        inputIds.Span[inputIdCnt] = _sep.Id;
         inputIdCnt++;
         var nonPaddedCnt = inputIdCnt;
 
         if (padTo is int padLen && padLen > inputIdCnt)
         {
-            Array.Fill(inputIds, _padId, inputIdCnt, padLen - inputIdCnt);
+            inputIdsSpan.Slice(inputIdCnt, padLen - inputIdCnt).Fill(_pad.Id);
             inputIdCnt = padLen;
         }
 
-        var attM = new long[inputIdCnt];
-        var tokTypI = new long[inputIdCnt];
-        Array.Fill(attM, 1, 0, nonPaddedCnt);
-        Array.Fill(attM, 1, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
-        Array.Fill(tokTypI, 0);
-        return (inputIds.AsMemory(0, inputIdCnt), attM, tokTypI);
+        return (inputIdCnt, nonPaddedCnt);
     }
 
     /// <summary>
@@ -295,14 +321,14 @@ public class BertTokenizer
                 return TokenizeSubword(formD.AsSpan(), tokenIdSink);
             }
 
-            tokenIdSink[0] = _unkId;
+            tokenIdSink[0] = _unk.Id;
             return 1;
         }
 
         // No null checks for _prefixes and _suffixes because this is a private method.
         var prefix = word;
         var cnt = 0;
-        int id = -1;
+        long id = -1;
 
         // ToDo: Remove string allocation; related: https://github.com/dotnet/runtime/issues/27229
         while (prefix.Length > 0)

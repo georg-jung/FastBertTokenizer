@@ -36,9 +36,9 @@ namespace FastBertTokenizer.Tests
                 {
                     var hash = file.GetHashCode(StringComparison.OrdinalIgnoreCase);
                     File.WriteAllText($"huggf_{hash}.json", JsonSerializer.Serialize(
-                        new { input_ids = huggF.InputIds.ToArray(), attm = huggF.AttentionMask.ToArray(), toktyp = huggF.TokenTypeIds.ToArray() }));
+                        new { dec = _underTest.Decode(huggF.InputIds.Span), input_ids = huggF.InputIds.ToArray(), attm = huggF.AttentionMask.ToArray(), toktyp = huggF.TokenTypeIds.ToArray() }));
                     File.WriteAllText($"ours_{hash}.json", JsonSerializer.Serialize(
-                        new { input_ids = ours.InputIds.ToArray(), attm = ours.AttentionMask.ToArray(), toktyp = ours.TokenTypeIds.ToArray() }));
+                        new { dec = _underTest.Decode(ours.InputIds.Span), input_ids = ours.InputIds.ToArray(), attm = ours.AttentionMask.ToArray(), toktyp = ours.TokenTypeIds.ToArray() }));
                     throw new ShouldAssertException($"Assertion failed for file {file}:\n{ex.Message}", ex);
                 }
             }
