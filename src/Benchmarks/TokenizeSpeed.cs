@@ -29,12 +29,12 @@ public class TokenizeSpeed
     {
         var files = Directory.GetFiles(corpusFolder);
         _corpus = new(files.Length);
-        foreach (var file in files)
+        foreach (var file in files.Take(5000))
         {
             var tx = File.ReadAllText(file);
             tx = tx.Substring(0, Math.Min(tx.Length, 8000)); // other lib throw if text is too long
-            tx = Regex.Replace(tx, @"\s+", " "); // required due to bad whitespace processing of other lib
-            tx = Regex.Replace(tx, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters
+            //tx = Regex.Replace(tx, @"\s+", " "); // required due to bad whitespace processing of other lib
+            //tx = Regex.Replace(tx, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters
             _corpus.Add(tx);
         }
 
@@ -58,7 +58,7 @@ public class TokenizeSpeed
     }
 
     [Benchmark]
-    public IReadOnlyCollection<object> FastBertTokenizer()
+    public IReadOnlyCollection<object> FastBertTokenizerAllocating()
     {
         List<object> res = new(_corpus.Count);
         foreach (var text in _corpus)
@@ -67,6 +67,19 @@ public class TokenizeSpeed
         }
 
         return res;
+    }
+
+    [Benchmark]
+    public object FastBertTokenizerMemReuse()
+    {
+        var iids = new long[_maxSequenceLength];
+        var attm = new long[_maxSequenceLength];
+        foreach (var text in _corpus)
+        {
+            _tokenizer.Tokenize(text, iids, attm);
+        }
+
+        return (iids, attm);
     }
 
     private sealed class ConcreteUncasedTokenizer : UncasedTokenizer
