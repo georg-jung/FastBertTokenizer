@@ -10,6 +10,19 @@ Serves similar needs and initially inspired by [BERTTokenizers](https://github.c
 * purely managed and dependency-free
 * optimized for high performance and low memory usage
 
+## Getting started
+
+```csharp
+using FastBertTokenizer;
+
+var tok = new BertTokenizer();
+var maxTokensForModel = 512;
+await tok.LoadVocabularyAsync("vocab.txt", true); // https://huggingface.co/BAAI/bge-small-en/blob/main/vocab.txt
+var text = File.ReadAllText("TextFile.txt");
+var (inputIds, attentionMask, tokenTypeIds) = tok.Tokenize(text, maxTokensForModel);
+Console.WriteLine(string.Join(", ", inputIds.ToArray().Select(x => x.ToString())));
+```
+
 ## Comparison of Tokenization Results to [HuggingFace Transformers' `AutoTokenizer`](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer)
 
 For correctness verification about 10.000 articles of [simple english Wikipedia](https://simple.wikipedia.org/wiki/Main_Page) were tokenized using FastBertTokenizer and Huggingface using the [baai bge vocab.txt](https://huggingface.co/BAAI/bge-small-en/blob/main/vocab.txt) file. The tokenization results were exactly the same apart from these two cases:
@@ -40,8 +53,8 @@ Note that while [BERTTokenizers handles token type incorrectly](https://github.c
 
 | Method                      | Mean       | Error    | StdDev   | Gen0         | Gen1       | Gen2      | Allocated  |
 |---------------------------- |-----------:|---------:|---------:|-------------:|-----------:|----------:|-----------:|
-| OtherLib                    | 4,942.0 ms | 54.79 ms | 48.57 ms | 1001000.0000 | 95000.0000 | 4000.0000 | 5952.43 MB |
+| [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers)                    | 4,942.0 ms | 54.79 ms | 48.57 ms | 1001000.0000 | 95000.0000 | 4000.0000 | 5952.43 MB |
 | FastBertTokenizerAllocating |   529.5 ms |  8.90 ms | 10.59 ms |   61000.0000 | 31000.0000 | 2000.0000 |  350.75 MB |
 | FastBertTokenizerMemReuse   |   404.5 ms |  7.72 ms |  7.22 ms |   68000.0000 |          - |         - |  136.83 MB |
 
-The `FastBertTokenizerMemReuse` benchmark writes the results of the tokenization to the same memory area while `FastBertTokenizerAllocating` allocates new memory for it's return values.
+The `FastBertTokenizerMemReuse` benchmark writes the results of the tokenization to the same memory area while `FastBertTokenizerAllocating` allocates new memory for it's return values. See [`src/Benchmarks`](/src/Benchmarks/) for details how these benchmarks were perfomed.
