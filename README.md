@@ -1,4 +1,4 @@
-# FastBertTokenizers
+# FastBertTokenizer
 
 A fast and memory-efficient library for WordPiece tokenization as it is used by BERT. Tokenization results are tested against the outputs of [HuggingFace Transformers' `AutoTokenizer`](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer).
 
@@ -11,7 +11,7 @@ Serves similar needs and initially inspired by [BERTTokenizers](https://github.c
 * [better whitespace handling](https://github.com/NMZivkovic/BertTokenizers/issues/24)
 * [handles unknown characters correctly](https://github.com/NMZivkovic/BertTokenizers/issues/26)
 * [does not throw if text is longer than maximum sequence length](https://github.com/NMZivkovic/BertTokenizers/issues/18)
-* [correct handling of token type ids](https://github.com/NMZivkovic/BertTokenizers/issues/18)
+* While [BERTTokenizers handles token type incorrectly](https://github.com/NMZivkovic/BertTokenizers/issues/18), it does support input of to pieces of text that are tokenized with a separator in between. FastBertTokenizer currently does not support this.
 * handles unicode control chars
 * handles other alphabets such as greek and right-to-left languages
 
