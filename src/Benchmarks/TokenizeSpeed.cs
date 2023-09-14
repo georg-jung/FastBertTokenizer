@@ -37,7 +37,7 @@ public class TokenizeSpeed
         _otherLibTokenizer = new(vocabTxtFile);
         _tokenizer = new();
 
-        _tokenizer.LoadVocabularyAsync(vocabTxtFile, false).GetAwaiter().GetResult();
+        _tokenizer.LoadVocabularyAsync(vocabTxtFile, true).GetAwaiter().GetResult();
         _maxSequenceLength = maxSequenceLength;
     }
 
