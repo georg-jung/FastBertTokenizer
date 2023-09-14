@@ -18,6 +18,13 @@
     <PackageDescription>
 Fast and memory-efficient WordPiece tokenizer as it is used by BERT and others. Tokenizes text for further processing using NLP/language models.
     </PackageDescription>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../logo.png" Pack="true" PackagePath="/icon.png" />
+    <None Include="../../README.md" Pack="true" PackagePath="/"/>
+  </ItemGroup>
 
 </Project>

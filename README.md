@@ -1,4 +1,17 @@
+<p align="center">
+  <a href="https://www.nuget.org/packages/FastBertTokenizer/">
+    <img
+      alt="FastBertTokenizer logo"
+      src="logo.svg"
+      width="100"
+    />
+  </a>
+</p>
+
 # FastBertTokenizer
+
+[![NuGet version (FastBertTokenizer)](https://img.shields.io/nuget/v/FastBertTokenizer.svg?style=flat)](https://www.nuget.org/packages/FastBertTokenizer/)
+![.NET Build](https://github.com/georg-jung/FastBertTokenizer/actions/workflows/dotnet-build.yml/badge.svg)
 
 A fast and memory-efficient library for WordPiece tokenization as it is used by BERT. Tokenization results are tested against the outputs of [HuggingFace Transformers' `AutoTokenizer`](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer).
 
@@ -58,3 +71,7 @@ Note that while [BERTTokenizers handles token type incorrectly](https://github.c
 | FastBertTokenizerMemReuse   |   404.5 ms |  7.72 ms |  7.22 ms |   68000.0000 |          - |         - |  136.83 MB |
 
 The `FastBertTokenizerMemReuse` benchmark writes the results of the tokenization to the same memory area while `FastBertTokenizerAllocating` allocates new memory for it's return values. See [`src/Benchmarks`](/src/Benchmarks/) for details how these benchmarks were perfomed.
+
+## Logo
+
+Created by combining <https://icons.getbootstrap.com/icons/cursor-text/> in .NET brand color with <https://icons.getbootstrap.com/icons/braces/>.
