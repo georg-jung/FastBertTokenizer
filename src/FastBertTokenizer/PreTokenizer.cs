@@ -33,6 +33,9 @@ public class PreTokenizer
                         ? stackalloc char[toProcess.Length]
                         : new char[toProcess.Length];
                     toProcess.ToLowerInvariant(span);
+
+                    // ToDo: Maybe we should also Unicode normalize here and not just in the OnUnknown case, because this might lead to different results.
+                    // related: https://github.com/dotnet/runtime/issues/87757
                     return processToken(span);
                 }
                 else
