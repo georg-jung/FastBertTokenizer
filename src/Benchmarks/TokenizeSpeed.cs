@@ -24,7 +24,7 @@ public class TokenizeSpeed
     private readonly int _maxSequenceLength;
 
     public TokenizeSpeed()
-        : this("C:\\Users\\georg\\simplewikicorpus", "Vocabularies/baai-bge-small-en-vocab.txt", 2048)
+        : this("C:\\Users\\georg\\simplewikicorpus_more", "Vocabularies/baai-bge-small-en-vocab.txt", 2048 * 6)
     {
     }
 
@@ -42,7 +42,7 @@ public class TokenizeSpeed
             foreach (var file in files)
             {
                 var tx = File.ReadAllText(file);
-                tx = tx.Substring(0, Math.Min(tx.Length, 5000)); // other lib throw if text is too long
+                /* tx = tx.Substring(0, Math.Min(tx.Length, 5000)); // other lib throw if text is too long
                 tx = Regex.Replace(tx, @"\s+", " "); // required due to bad whitespace processing of other lib
                 tx = Regex.Replace(tx, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters */
                 _corpus.Add(tx);
@@ -56,7 +56,7 @@ public class TokenizeSpeed
         _maxSequenceLength = maxSequenceLength;
     }
 
-    [Benchmark]
+    //[Benchmark]
     public IReadOnlyCollection<object> OtherLib()
     {
         List<object> res = new(_corpus.Count);
