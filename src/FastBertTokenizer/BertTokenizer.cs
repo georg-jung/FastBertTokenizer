@@ -19,11 +19,12 @@ public partial class BertTokenizer
     private (int Id, string Token) _sep = default!;
     private (int Id, string Token) _pad = default!;
     private bool _lowercaseInput;
+    private NormalizationForm _normalization;
 
-    public async Task LoadVocabularyAsync(string vocabFilePath, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]")
+    public async Task LoadVocabularyAsync(string vocabFilePath, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD)
     {
         using var sr = new StreamReader(vocabFilePath);
-        await LoadVocabularyAsync(sr, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken);
+        await LoadVocabularyAsync(sr, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken, normalization);
     }
 
     /// <summary>
@@ -40,10 +41,11 @@ public partial class BertTokenizer
     /// <param name="clsToken">Special token for cls/sequence start, e.g. [CLS].</param>
     /// <param name="sepToken">Special token for sperator, e.g. [SEP].</param>
     /// <param name="padToken">Special token for padding, e.g. [PAD].</param>
+    /// <param name="normalization">The unicode normalization form used by this vocabulary.</param>
     /// <returns>A task that represents the loading operation.</returns>
     /// <exception cref="ArgumentNullException">If one of the requred arguments is null.</exception>
     /// <exception cref="InvalidOperationException">If a vocabulary is already loaded.</exception>
-    public async Task LoadVocabularyAsync(TextReader vocabFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]")
+    public async Task LoadVocabularyAsync(TextReader vocabFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD)
     {
         _ = vocabFile ?? throw new ArgumentNullException(nameof(vocabFile));
         _ = unknownToken ?? throw new ArgumentNullException(nameof(unknownToken));
@@ -66,7 +68,7 @@ public partial class BertTokenizer
             {
                 if (line.StartsWith("##", StringComparison.Ordinal))
                 {
-                    _suffixes[line[2..].Normalize()] = i;
+                    _suffixes[line[2..].Normalize(normalization)] = i;
                 }
                 else if (line.Equals(unknownToken, StringComparison.Ordinal))
                 {
@@ -86,7 +88,7 @@ public partial class BertTokenizer
                 }
                 else
                 {
-                    _prefixes[line.Normalize()] = i;
+                    _prefixes[line.Normalize(normalization)] = i;
                 }
             }
 
@@ -94,6 +96,7 @@ public partial class BertTokenizer
         }
 
         _lowercaseInput = convertInputToLowercase;
+        _normalization = normalization;
         _unk = (unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unknownToken}."), unknownToken);
         _cls = (clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}."), clsToken);
         _sep = (sepId ?? throw new InvalidOperationException($"Vocabulary does not contain sep token {sepToken}."), sepToken);
@@ -250,7 +253,7 @@ public partial class BertTokenizer
     /// </summary>
     /// <param name="text">String to remove diacritics from.</param>
     /// <returns>String without diacritics.</returns>
-    private static string RemoveDiacritics(string text)
+    private static string RemoveDiacritics(string text, NormalizationForm targetNf)
     {
         bool NeedsRemoval(ReadOnlySpan<char> formD)
         {
@@ -292,7 +295,7 @@ public partial class BertTokenizer
             }
         }
 
-        return new string(span.Slice(0, i)).Normalize(NormalizationForm.FormC);
+        return new string(span.Slice(0, i)).Normalize(targetNf);
     }
 
     private int TokenizeSubword(ReadOnlySpan<char> word, Span<long> tokenIdSink)
@@ -309,16 +312,21 @@ public partial class BertTokenizer
                 return TokenizeSubword(withoutControl, tokenIdSink);
             }
 
-            var withoutDiacrit = RemoveDiacritics(word.ToString());
+            // Normalize and IsNormalized for ReadOnlySpan<char> is not yet implemented:
+            // https://github.com/dotnet/runtime/issues/87757
+            // RemoveDiacritics ends up in form _normalization too.
+            // If we have a vocab that includes diacritics we might sill want to normalize first
+            // and try again before removing diacritics.
+            var wordStr = word.ToString();
+            if (!wordStr.IsNormalized(_normalization))
+            {
+                return TokenizeSubword(wordStr.Normalize(_normalization), tokenIdSink);
+            }
+
+            var withoutDiacrit = RemoveDiacritics(wordStr, _normalization);
             if (!MemoryExtensions.Equals(withoutDiacrit, word, StringComparison.Ordinal))
             {
                 return TokenizeSubword(withoutDiacrit.AsSpan(), tokenIdSink);
-            }
-
-            var formD = withoutDiacrit.Normalize(NormalizationForm.FormD);
-            if (!MemoryExtensions.Equals(formD, word, StringComparison.Ordinal))
-            {
-                return TokenizeSubword(formD.AsSpan(), tokenIdSink);
             }
 
             tokenIdSink[0] = _unk.Id;

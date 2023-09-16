@@ -31,7 +31,7 @@ namespace FastBertTokenizer.Tests
 
             foreach (var file in files)
             {
-                var tx = File.ReadAllText(file).Normalize();
+                var tx = File.ReadAllText(file);
                 var huggF = await _rest.TokenizeAsync(tx);
                 var ours = _underTest.Tokenize(tx, 512);
                 try
