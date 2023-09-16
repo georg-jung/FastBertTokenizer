@@ -15,38 +15,35 @@ namespace Benchmarks;
 [EtwProfiler(performExtraBenchmarksRun: false)]
 [EventPipeProfiler(EventPipeProfile.CpuSampling)] // for speedscope files
 */
+//[EventPipeProfiler(EventPipeProfile.CpuSampling)]
 public class TokenizeSpeed
 {
-    private static (List<string> Corpus, int MaxLen)? _cache;
     private readonly List<string> _corpus;
+    private readonly List<string> _otherLibCorpus;
     private readonly ConcreteUncasedTokenizer _otherLibTokenizer;
     private readonly BertTokenizer _tokenizer;
     private readonly int _maxSequenceLength;
 
     public TokenizeSpeed()
-        : this("C:\\Users\\georg\\simplewikicorpus_more", "Vocabularies/baai-bge-small-en-vocab.txt", 2048 * 6)
+        : this("C:\\Users\\georg\\simplewikicorpus_more", "Vocabularies/baai-bge-small-en-vocab.txt", 512)
     {
     }
 
     public TokenizeSpeed(string corpusFolder, string vocabTxtFile, int maxSequenceLength)
     {
-        if (_cache is { } cache)
+        var files = Directory.GetFiles(corpusFolder);
+        _corpus = new(files.Length);
+        _otherLibCorpus = new(files.Length);
+        foreach (var file in files)
         {
-            _corpus = cache.Corpus;
-            _maxSequenceLength = cache.MaxLen;
-        }
-        else
-        {
-            var files = Directory.GetFiles(corpusFolder);
-            _corpus = new(files.Length);
-            foreach (var file in files)
-            {
-                var tx = File.ReadAllText(file);
-                /* tx = tx.Substring(0, Math.Min(tx.Length, 5000)); // other lib throw if text is too long
-                tx = Regex.Replace(tx, @"\s+", " "); // required due to bad whitespace processing of other lib
-                tx = Regex.Replace(tx, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters */
-                _corpus.Add(tx);
-            }
+            var tx = File.ReadAllText(file);
+            _corpus.Add(tx);
+
+            // this preprocessing gives the other lib kind of an unfair advantage, but it throws otherwise
+            var otherLib = tx.Substring(0, Math.Min(tx.Length, 1250)); // other lib throw if text is too long; 1250 works with 512 tokens, 1500 doesn't; 5000 works with 2048 tokens
+            otherLib = Regex.Replace(otherLib, @"\s+", " "); // required due to bad whitespace processing of other lib
+            otherLib = Regex.Replace(otherLib, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters
+            _otherLibCorpus.Add(otherLib);
         }
 
         _otherLibTokenizer = new(vocabTxtFile);
@@ -56,11 +53,11 @@ public class TokenizeSpeed
         _maxSequenceLength = maxSequenceLength;
     }
 
-    //[Benchmark]
+    [Benchmark]
     public IReadOnlyCollection<object> OtherLib()
     {
-        List<object> res = new(_corpus.Count);
-        foreach (var text in _corpus)
+        List<object> res = new(_otherLibCorpus.Count);
+        foreach (var text in _otherLibCorpus)
         {
             res.Add(_otherLibTokenizer.Encode(_maxSequenceLength, text));
         }
@@ -68,8 +65,8 @@ public class TokenizeSpeed
         return res;
     }
 
-    [Benchmark]
-    public IReadOnlyCollection<object> FastBertTokenizerAllocating()
+    [Benchmark(Baseline = true)]
+    public IReadOnlyCollection<object> FastBertTokenizerSinglethreadedAllocating()
     {
         List<object> res = new(_corpus.Count);
         foreach (var text in _corpus)
@@ -81,16 +78,48 @@ public class TokenizeSpeed
     }
 
     [Benchmark]
-    public object FastBertTokenizerMemReuse()
+    public object FastBertTokenizerSingleThreadedMemReuse()
     {
         var iids = new long[_maxSequenceLength];
         var attm = new long[_maxSequenceLength];
+        var toktyp = new long[_maxSequenceLength];
+        Array.Fill(toktyp, 0);
         foreach (var text in _corpus)
         {
             _tokenizer.Tokenize(text, iids, attm);
         }
 
-        return (iids, attm);
+        return (iids, attm, toktyp);
+    }
+
+    [Benchmark]
+    public IReadOnlyCollection<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> FastBertTokenizerMultithreadedAllocating()
+    {
+        // this might be interesting to benchmark but doesn't make much sense as a real world use case
+        List<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> res = new(_corpus.Count);
+        var x = _corpus.Select(x => x.AsMemory()).AsParallel().AsOrdered().Select(x => _tokenizer.Tokenize(x.Span, _maxSequenceLength));
+        res.AddRange(x);
+        return res;
+    }
+
+    [Benchmark]
+    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) FastBertTokenizerMultithreadedMemReuse()
+    {
+        var batchSize = 100;
+        var iids = new long[_maxSequenceLength * batchSize];
+        var attm = new long[_maxSequenceLength * batchSize];
+        var toktyp = new long[_maxSequenceLength * batchSize];
+        Array.Fill(toktyp, 0);
+
+        foreach (var batch in _corpus.Select(x => x.AsMemory()).Buffer(batchSize).Cast<IReadOnlyList<ReadOnlyMemory<char>>>())
+        {
+            var batchSeqLen = _maxSequenceLength * batch.Count;
+            var iidsM = iids.AsMemory(0, batchSeqLen);
+            var attmM = attm.AsMemory(0, batchSeqLen);
+            _tokenizer.Tokenize(batch, iidsM, attmM, _maxSequenceLength);
+        }
+
+        return (iids.AsMemory(), attm.AsMemory(), toktyp.AsMemory());
     }
 
     private sealed class ConcreteUncasedTokenizer : UncasedTokenizer
