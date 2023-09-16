@@ -123,7 +123,7 @@ public partial class BertTokenizer
         var attM = new long[inputIdCnt];
         var tokTypI = new long[inputIdCnt];
         Array.Fill(attM, 1, 0, nonPaddedCnt);
-        Array.Fill(attM, 1, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
+        Array.Fill(attM, 0, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
         Array.Fill(tokTypI, 0);
         return (inputIds.AsMemory(0, inputIdCnt), attM, tokTypI);
     }
