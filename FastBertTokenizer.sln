@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks", "src\Benchmark
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastBertTokenizer", "src\FastBertTokenizer\FastBertTokenizer.csproj", "{AAF7115E-1ABD-465D-8E93-C01F9CA57A33}"
 EndProject
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "RestHuggingfaceTokenizer", "src\RestHuggingfaceTokenizer\RestHuggingfaceTokenizer.pyproj", "{8B2FBC6B-8422-4BB4-9249-93884CB52A4E}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "RestHuggingfaceTokenizer", "src\HuggingfaceTokenizer\Rest\RestHuggingfaceTokenizer.pyproj", "{8B2FBC6B-8422-4BB4-9249-93884CB52A4E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastBertTokenizer.Tests", "src\FastBertTokenizer.Tests\FastBertTokenizer.Tests.csproj", "{E414EC82-1D00-4EB3-AD41-CFF620183D5D}"
 EndProject
