@@ -54,6 +54,7 @@ jobs:
 
     - run: dotnet restore /p:ContinuousIntegrationBuild=true
     - run: dotnet build -c Release --no-restore /p:ContinuousIntegrationBuild=true
+    - run: dotnet test -c Release --no-restore --no-build /p:ContinuousIntegrationBuild=true
     - run: dotnet pack -c Release --no-restore --no-build  /p:ContinuousIntegrationBuild=true
     - uses: actions/upload-artifact@v3
       with:
