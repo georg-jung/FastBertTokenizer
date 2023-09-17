@@ -138,6 +138,7 @@ internal class PreTokenizer
         // space-separated words, so they are not treated specially and handled
         // like all of the other languages.
 #pragma warning disable SA1025 // Code should not contain multiple whitespace in a row
+#pragma warning disable S2198 //  Comparison to this constant is useless; the constant is outside the range of type 'char'. They are not useless, the rule is just wrong.
         if (
             (cp >= 0x4E00 && cp <= 0x9FFF)       // CJK Unified Ideographs
             || (cp >= 0x3400 && cp <= 0x4DBF)    // CJK Unified Ideographs Extension A
@@ -150,6 +151,7 @@ internal class PreTokenizer
         {
             return true;
         }
+#pragma warning restore S2198 //  Comparison to this constant is useless; the constant is outside the range of type 'char'.
 #pragma warning restore SA1025 // Code should not contain multiple whitespace in a row
 
         return false;

@@ -21,88 +21,6 @@ public partial class BertTokenizer
     private bool _lowercaseInput;
     private NormalizationForm _normalization;
 
-    public async Task LoadVocabularyAsync(string vocabFilePath, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD)
-    {
-        using var sr = new StreamReader(vocabFilePath);
-        await LoadVocabularyAsync(sr, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken, normalization);
-    }
-
-    /// <summary>
-    /// Load a vocab.txt file that assigns an id to each token based on the line number.
-    /// </summary>
-    /// <param name="vocabFile">Path to the vocab.txt file.</param>
-    /// <param name="convertInputToLowercase">
-    /// Convert tokenization inputs to lowercase before encoding using this vocabulary?
-    /// Set to true when using an uncased model, false when using a cased model.
-    /// Can be set to false when using an uncased model if the input is already lowercased, which might
-    /// lead to a performance gain in the 5% ballpark (lowercasing is non-allocating nonetheless).
-    /// </param>
-    /// <param name="unknownToken">Special token for unkown, e.g. [UNK].</param>
-    /// <param name="clsToken">Special token for cls/sequence start, e.g. [CLS].</param>
-    /// <param name="sepToken">Special token for sperator, e.g. [SEP].</param>
-    /// <param name="padToken">Special token for padding, e.g. [PAD].</param>
-    /// <param name="normalization">The unicode normalization form used by this vocabulary.</param>
-    /// <returns>A task that represents the loading operation.</returns>
-    /// <exception cref="ArgumentNullException">If one of the requred arguments is null.</exception>
-    /// <exception cref="InvalidOperationException">If a vocabulary is already loaded.</exception>
-    public async Task LoadVocabularyAsync(TextReader vocabFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD)
-    {
-        _ = vocabFile ?? throw new ArgumentNullException(nameof(vocabFile));
-        _ = unknownToken ?? throw new ArgumentNullException(nameof(unknownToken));
-        _ = clsToken ?? throw new ArgumentNullException(nameof(clsToken));
-        _ = sepToken ?? throw new ArgumentNullException(nameof(sepToken));
-        _ = padToken ?? throw new ArgumentNullException(nameof(padToken));
-
-        if (_prefixes is not null)
-        {
-            throw new InvalidOperationException("Vocabulary already loaded.");
-        }
-
-        _prefixes = new Dictionary<string, long>(StringComparer.Ordinal);
-        _suffixes = new Dictionary<string, long>(StringComparer.Ordinal);
-        (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
-        var i = 0;
-        while (await vocabFile.ReadLineAsync() is string line)
-        {
-            if (!string.IsNullOrEmpty(line))
-            {
-                if (line.StartsWith("##", StringComparison.Ordinal))
-                {
-                    _suffixes[line[2..].Normalize(normalization)] = i;
-                }
-                else if (line.Equals(unknownToken, StringComparison.Ordinal))
-                {
-                    unkId = i;
-                }
-                else if (line.Equals(clsToken, StringComparison.Ordinal))
-                {
-                    clsId = i;
-                }
-                else if (line.Equals(sepToken, StringComparison.Ordinal))
-                {
-                    sepId = i;
-                }
-                else if (line.Equals(padToken, StringComparison.Ordinal))
-                {
-                    padId = i;
-                }
-                else
-                {
-                    _prefixes[line.Normalize(normalization)] = i;
-                }
-            }
-
-            i++;
-        }
-
-        _lowercaseInput = convertInputToLowercase;
-        _normalization = normalization;
-        _unk = (unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unknownToken}."), unknownToken);
-        _cls = (clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}."), clsToken);
-        _sep = (sepId ?? throw new InvalidOperationException($"Vocabulary does not contain sep token {sepToken}."), sepToken);
-        _pad = (padId ?? throw new InvalidOperationException($"Vocabulary does not contain pad token {padToken}."), padToken);
-    }
-
     public int Tokenize(string input, Memory<long> inputIds, Span<long> attentionMask, Span<long> tokenTypeIds, int? padTo = null)
     {
         var inputIdCnt = Tokenize(input, inputIds, attentionMask, padTo);
@@ -252,6 +170,7 @@ public partial class BertTokenizer
     /// https://github.com/huggingface/transformers/blob/7db1ad63d9a9a8f705e13d68f90269df78a16df5/src/transformers/models/bert/tokenization_bert.py#L449.
     /// </summary>
     /// <param name="text">String to remove diacritics from.</param>
+    /// <param name="targetNf">The returned value will be unicode normalized in the form.</param>
     /// <returns>String without diacritics.</returns>
     private static string RemoveDiacritics(string text, NormalizationForm targetNf)
     {
