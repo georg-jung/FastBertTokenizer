@@ -1,4 +1,4 @@
-// Copyright (c) Georg Jung. All rights reserved.
+﻿// Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
@@ -52,10 +52,10 @@ public static class RustTokenizer
 
     internal static class NativeMethods
     {
-        [DllImport("tokenize.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tokenize", CallingConvention = CallingConvention.Cdecl)]
         public static extern bool load_tokenizer(string tokenizerPath, int sequenceLength);
 
-        [DllImport("tokenize.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tokenize", CallingConvention = CallingConvention.Cdecl)]
         public static unsafe extern bool tokenize_and_get_ids(byte[] inputUtf8, uint* ids, int idsLen, uint* attentionMask, int attentionMaskLen);
     }
 }

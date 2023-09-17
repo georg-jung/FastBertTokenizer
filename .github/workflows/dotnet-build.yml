@@ -26,6 +26,8 @@ jobs:
         lfs: true
     - uses: dotnet/nbgv@v0.4
       id: nbgv
+    - run: cargo build --release
+      working-directory: src/HuggingfaceTokenizer/RustLib
     - run: dotnet restore
     - run: dotnet build -c Release --no-restore /p:ContinuousIntegrationBuild=true
     - run: dotnet pack -c Release --no-restore --no-build
