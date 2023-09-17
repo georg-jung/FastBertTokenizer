@@ -24,6 +24,12 @@ jobs:
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
         lfs: true
+    - uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
     - uses: dotnet/nbgv@v0.4
       id: nbgv
 
@@ -46,9 +52,9 @@ jobs:
         write-mode: overwrite
         contents: ${{ steps.clean-readme.outputs.markdown }}
 
-    - run: dotnet restore
+    - run: dotnet restore /p:ContinuousIntegrationBuild=true
     - run: dotnet build -c Release --no-restore /p:ContinuousIntegrationBuild=true
-    - run: dotnet pack -c Release --no-restore --no-build
+    - run: dotnet pack -c Release --no-restore --no-build  /p:ContinuousIntegrationBuild=true
     - uses: actions/upload-artifact@v3
       with:
         name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.Version }}
