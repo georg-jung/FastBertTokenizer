@@ -4,10 +4,11 @@
 using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 
 namespace RustLibWrapper;
 
-public static class RustTokenizer
+public static partial class RustTokenizer
 {
     public static void LoadTokenizer(string path, int sequenceLength)
     {
@@ -19,12 +20,11 @@ public static class RustTokenizer
 
     public static void TokenizeAndGetIds(string input, Span<uint> ids, Span<uint> attentionMask)
     {
-        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(input + '\0');
         unsafe
         {
             fixed (uint* idsPtr = ids, attentionMaskPtr = attentionMask)
             {
-                if (!NativeMethods.tokenize_and_get_ids(bytes, idsPtr, ids.Length, attentionMaskPtr, attentionMask.Length))
+                if (!NativeMethods.tokenize_and_get_ids(input, idsPtr, ids.Length, attentionMaskPtr, attentionMask.Length))
                 {
                     throw new InvalidOperationException("Failed to tokenize the input string.");
                 }
@@ -50,12 +50,23 @@ public static class RustTokenizer
         }
     }
 
-    internal static class NativeMethods
+    internal static partial class NativeMethods
     {
-        [DllImport("tokenize", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool load_tokenizer(string tokenizerPath, int sequenceLength);
+        [LibraryImport("tokenize")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool load_tokenizer(
+            [MarshalUsing(typeof(Utf8StringMarshaller))] string tokenizerPath,
+            int sequenceLength);
 
-        [DllImport("tokenize", CallingConvention = CallingConvention.Cdecl)]
-        public static unsafe extern bool tokenize_and_get_ids(byte[] inputUtf8, uint* ids, int idsLen, uint* attentionMask, int attentionMaskLen);
+        [LibraryImport("tokenize")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static unsafe partial bool tokenize_and_get_ids(
+            [MarshalUsing(typeof(Utf8StringMarshaller))] string inputUtf8,
+            uint* ids,
+            int idsLen,
+            uint* attentionMask,
+            int attentionMaskLen);
     }
 }
