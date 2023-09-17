@@ -31,11 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Vocabularies\baai-bge-small-en-vocab.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="../../data/wiki-simple.json.br">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>data/wiki-simple.json.br</Link>

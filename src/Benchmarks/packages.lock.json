@@ -308,6 +308,9 @@
       },
       "fastberttokenizer": {
         "type": "Project"
+      },
+      "rustlibwrapper": {
+        "type": "Project"
       }
     }
   }

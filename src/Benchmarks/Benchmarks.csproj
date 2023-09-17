@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -17,11 +17,21 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FastBertTokenizer\FastBertTokenizer.csproj" />
+    <ProjectReference Include="..\HuggingfaceTokenizer\RustLibWrapper\RustLibWrapper.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Vocabularies\baai-bge-small-en-vocab.txt">
+    <ItemGroup>
+    <None Include="../../data/wiki-simple.json.br">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>data/wiki-simple.json.br</Link>
+    </None>
+    <None Include="../../data/baai-bge-small-en-vocab.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>data/baai-bge-small-en-vocab.txt</Link>
+    </None>
+    <None Include="../../data/baai-bge-small-en-tokenizer.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>data/baai-bge-small-en-tokenizer.json</Link>
     </None>
   </ItemGroup>
 

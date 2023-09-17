@@ -1,11 +1,14 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.IO.Compression;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
 using BERTTokenizers.Base;
 using FastBertTokenizer;
+using RustLibWrapper;
 
 namespace Benchmarks;
 
@@ -15,7 +18,6 @@ namespace Benchmarks;
 [EtwProfiler(performExtraBenchmarksRun: false)]
 [EventPipeProfiler(EventPipeProfile.CpuSampling)] // for speedscope files
 */
-//[EventPipeProfiler(EventPipeProfile.CpuSampling)]
 public class TokenizeSpeed
 {
     private readonly List<string> _corpus;
@@ -25,18 +27,21 @@ public class TokenizeSpeed
     private readonly int _maxSequenceLength;
 
     public TokenizeSpeed()
-        : this("C:\\Users\\georg\\simplewikicorpus_more", "Vocabularies/baai-bge-small-en-vocab.txt", 512)
+        : this("data/wiki-simple.json.br", "data/baai-bge-small-en-vocab.txt", "data/baai-bge-small-en-tokenizer.json", 512)
     {
     }
 
-    public TokenizeSpeed(string corpusFolder, string vocabTxtFile, int maxSequenceLength)
+    public TokenizeSpeed(string corpusPath, string vocabTxtFile, string tokenizerJsonPath, int maxSequenceLength)
     {
-        var files = Directory.GetFiles(corpusFolder);
-        _corpus = new(files.Length);
-        _otherLibCorpus = new(files.Length);
-        foreach (var file in files)
+        RustTokenizer.LoadTokenizer(tokenizerJsonPath, maxSequenceLength);
+        using var fs = File.OpenRead(corpusPath);
+        using var uncompress = new BrotliStream(fs, CompressionMode.Decompress);
+        var dict = JsonSerializer.Deserialize<Dictionary<int, string>>(uncompress)!;
+
+        _corpus = new(dict.Count);
+        _otherLibCorpus = new(dict.Count);
+        foreach (var tx in dict.Values)
         {
-            var tx = File.ReadAllText(file);
             _corpus.Add(tx);
 
             // this preprocessing gives the other lib kind of an unfair advantage, but it throws otherwise
@@ -49,7 +54,8 @@ public class TokenizeSpeed
         _otherLibTokenizer = new(vocabTxtFile);
         _tokenizer = new();
 
-        _tokenizer.LoadVocabularyAsync(vocabTxtFile, true).GetAwaiter().GetResult();
+        using var sr = File.OpenText(vocabTxtFile);
+        _tokenizer.LoadVocabulary(sr, true);
         _maxSequenceLength = maxSequenceLength;
     }
 
@@ -63,6 +69,19 @@ public class TokenizeSpeed
         }
 
         return res;
+    }
+
+    [Benchmark]
+    public object RustHuggingfaceWrapperSinglethreadedMemReuse()
+    {
+        var inputIds = new uint[_maxSequenceLength];
+        var attMask = new uint[_maxSequenceLength];
+        foreach (var text in _otherLibCorpus)
+        {
+            RustTokenizer.TokenizeAndGetIds(text, inputIds.AsSpan(), attMask.AsSpan());
+        }
+
+        return (inputIds, attMask);
     }
 
     [Benchmark(Baseline = true)]
