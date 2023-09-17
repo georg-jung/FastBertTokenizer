@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace FastBertTokenizer;
 
-public class PreTokenizer
+internal class PreTokenizer
 {
     public delegate bool ReadOnlySpanFunc<T>(ReadOnlySpan<T> span);
 
