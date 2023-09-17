@@ -26,6 +26,11 @@ jobs:
         lfs: true
     - uses: dotnet/nbgv@v0.4
       id: nbgv
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: |
+          src/HuggingfaceTokenizer/RustLib
     - run: cargo build --release
       working-directory: src/HuggingfaceTokenizer/RustLib
 
