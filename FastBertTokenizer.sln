@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastBertTokenizer", "src\Fa
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "RestHuggingfaceTokenizer", "src\HuggingfaceTokenizer\Rest\RestHuggingfaceTokenizer.pyproj", "{8B2FBC6B-8422-4BB4-9249-93884CB52A4E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastBertTokenizer.Tests", "src\FastBertTokenizer.Tests\FastBertTokenizer.Tests.csproj", "{E414EC82-1D00-4EB3-AD41-CFF620183D5D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastBertTokenizer.Tests", "src\FastBertTokenizer.Tests\FastBertTokenizer.Tests.csproj", "{E414EC82-1D00-4EB3-AD41-CFF620183D5D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8D73100E-ADBD-4CAD-AE90-4E1F5611C281}"
 	ProjectSection(SolutionItems) = preProject
@@ -23,6 +23,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		stylecop.json = stylecop.json
 		version.json = version.json
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RustLibWrapper", "src\HuggingfaceTokenizer\RustLibWrapper\RustLibWrapper.csproj", "{9249993D-DFDA-4DD0-86B0-E56940D7B15B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,6 +46,10 @@ Global
 		{E414EC82-1D00-4EB3-AD41-CFF620183D5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E414EC82-1D00-4EB3-AD41-CFF620183D5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E414EC82-1D00-4EB3-AD41-CFF620183D5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9249993D-DFDA-4DD0-86B0-E56940D7B15B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9249993D-DFDA-4DD0-86B0-E56940D7B15B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9249993D-DFDA-4DD0-86B0-E56940D7B15B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9249993D-DFDA-4DD0-86B0-E56940D7B15B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

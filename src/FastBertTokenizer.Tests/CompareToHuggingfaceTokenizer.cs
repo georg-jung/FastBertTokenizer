@@ -2,13 +2,14 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using RustLibWrapper;
 using Shouldly;
 
 namespace FastBertTokenizer.Tests
 {
     public class CompareToHuggingfaceTokenizer
     {
-        private readonly RestBaaiBgeTokenizer _rest = new("http://localhost:8080/tokenize");
+        //private readonly RestBaaiBgeTokenizer _rest = new("http://localhost:8080/tokenize");
         private readonly BertTokenizer _underTest = new();
 
         public CompareToHuggingfaceTokenizer()
@@ -17,9 +18,10 @@ namespace FastBertTokenizer.Tests
         }
 
         [Fact]
-        public async Task Test1()
+        public void Test1()
         {
-            string corpusFolder = "C:\\Users\\georg\\simplewikicorpus";
+            string corpusFolder = "C:\\Users\\georg\\simplewikicorpus_more";
+            RustTokenizer.LoadTokenizer("C:\\Users\\georg\\git\\bge-small-en\\tokenizer.json", 512);
 
             // 6309 contains assamese characters and huggingface tokenizer skips one [UNK] were I think one should be
             // 30153 has Rhône as the last word before hitting the 512 token id limit; we try prefixes first, huggingface removes diacritics first.
@@ -32,8 +34,8 @@ namespace FastBertTokenizer.Tests
             foreach (var file in files)
             {
                 var tx = File.ReadAllText(file);
-                var huggF = await _rest.TokenizeAsync(tx);
-                var ours = _underTest.Tokenize(tx, 512);
+                var huggF = RustTokenizer.TokenizeAndGetIds(tx, 512);
+                var ours = _underTest.Tokenize(tx, 512, 512); // Normalize(System.Text.NormalizationForm.FormC)
                 try
                 {
                     ours.InputIds.ShouldBe(huggF.InputIds);

@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FastBertTokenizer\FastBertTokenizer.csproj" />
+    <ProjectReference Include="..\HuggingfaceTokenizer\RustLibWrapper\RustLibWrapper.csproj" />
   </ItemGroup>
 
   <ItemGroup>
