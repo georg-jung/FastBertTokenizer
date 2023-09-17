@@ -54,9 +54,20 @@ jobs:
 
     - run: dotnet restore /p:ContinuousIntegrationBuild=true
     - run: dotnet build -c Release --no-restore /p:ContinuousIntegrationBuild=true
-    - run: dotnet test -c Release --no-restore --no-build /p:ContinuousIntegrationBuild=true
     - run: dotnet pack -c Release --no-restore --no-build  /p:ContinuousIntegrationBuild=true
     - uses: actions/upload-artifact@v3
       with:
         name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.Version }}
         path: bin/Packages/Release/**/*
+
+    - uses: zyborg/dotnet-tests-report@v1
+      with:
+        project_path: src/FastBertTokenizer.Tests
+        report_name: fast_bert_tokenizer_tests
+        report_title: FastBertTokenizer Tests
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        no_restore: true
+        no_build: true
+        msbuild_verbosity: normal
+        msbuild_configuration: Release
+        set_check_status_from_test_outcome: true
