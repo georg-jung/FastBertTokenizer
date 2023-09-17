@@ -103,7 +103,7 @@ public partial class BertTokenizer
         _pad = (padId ?? throw new InvalidOperationException($"Vocabulary does not contain pad token {padToken}."), padToken);
     }
 
-    public int Tokenize(ReadOnlySpan<char> input, Memory<long> inputIds, Span<long> attentionMask, Span<long> tokenTypeIds, int? padTo = null)
+    public int Tokenize(string input, Memory<long> inputIds, Span<long> attentionMask, Span<long> tokenTypeIds, int? padTo = null)
     {
         var inputIdCnt = Tokenize(input, inputIds, attentionMask, padTo);
         tokenTypeIds.Slice(0, inputIdCnt).Fill(0);
@@ -111,7 +111,7 @@ public partial class BertTokenizer
         return inputIdCnt;
     }
 
-    public int Tokenize(ReadOnlySpan<char> input, Memory<long> inputIds, Span<long> attentionMask, int? padTo = null)
+    public int Tokenize(string input, Memory<long> inputIds, Span<long> attentionMask, int? padTo = null)
     {
         var (inputIdCnt, nonPaddedCnt) = Tokenize(input, inputIds, padTo);
         attentionMask.Slice(0, nonPaddedCnt).Fill(1);
@@ -119,7 +119,7 @@ public partial class BertTokenizer
         return inputIdCnt;
     }
 
-    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) Tokenize(ReadOnlySpan<char> input, int maximumTokens = 512, int? padTo = null)
+    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) Tokenize(string input, int maximumTokens = 512, int? padTo = null)
     {
         var inputIds = new long[maximumTokens];
         var (inputIdCnt, nonPaddedCnt) = Tokenize(input, inputIds, padTo);
@@ -131,7 +131,7 @@ public partial class BertTokenizer
         return (inputIds.AsMemory(0, inputIdCnt), attM, tokTypI);
     }
 
-    private (int Length, int NonPadding) Tokenize(ReadOnlySpan<char> input, Memory<long> inputIds, int? padTo = null)
+    private (int Length, int NonPadding) Tokenize(string input, Memory<long> inputIds, int? padTo = null)
     {
         _ = _prefixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
@@ -140,7 +140,7 @@ public partial class BertTokenizer
         var maximumTokens = inputIds.Length;
         var inputIdCnt = 1;
         inputIdsSpan[0] = _cls.Id;
-        PreTokenizer.PreTokenize(input, OnWordToken, _lowercaseInput);
+        PreTokenizer.PreTokenize(input, OnWordToken, _lowercaseInput, _normalization);
 
         bool OnWordToken(ReadOnlySpan<char> word)
         {

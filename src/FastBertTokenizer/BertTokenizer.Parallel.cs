@@ -5,7 +5,7 @@ namespace FastBertTokenizer;
 
 public partial class BertTokenizer
 {
-    public void Tokenize(IReadOnlyList<ReadOnlyMemory<char>> inputs, Memory<long> inputIds, Memory<long> attentionMask, Memory<long> tokenTypeIds, int maximumTokens = 512)
+    public void Tokenize(IReadOnlyList<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, Memory<long> tokenTypeIds, int maximumTokens = 512)
     {
         var resultLen = maximumTokens * inputs.Count;
         if (tokenTypeIds.Length != resultLen)
@@ -17,7 +17,7 @@ public partial class BertTokenizer
         tokenTypeIds.Span.Fill(0);
     }
 
-    public void Tokenize(IReadOnlyList<ReadOnlyMemory<char>> inputs, Memory<long> inputIds, Memory<long> attentionMask, int maximumTokens = 512)
+    public void Tokenize(IReadOnlyList<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, int maximumTokens = 512)
     {
         var resultLen = maximumTokens * inputs.Count;
         if (inputIds.Length != resultLen || attentionMask.Length != resultLen)
@@ -28,7 +28,7 @@ public partial class BertTokenizer
         inputs.Select((x, i) => (InputIds: x, i)).AsParallel().ForAll(x =>
         {
             var startIdx = maximumTokens * x.i;
-            var (_, nonPad) = Tokenize(x.InputIds.Span, inputIds.Slice(startIdx, maximumTokens), maximumTokens);
+            var (_, nonPad) = Tokenize(x.InputIds, inputIds.Slice(startIdx, maximumTokens), maximumTokens);
             var span = attentionMask.Slice(startIdx, maximumTokens).Span;
             span.Slice(0, nonPad).Fill(1);
             span.Slice(nonPad, maximumTokens - nonPad).Fill(0);

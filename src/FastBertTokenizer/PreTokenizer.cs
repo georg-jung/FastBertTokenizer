@@ -3,6 +3,7 @@
 
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace FastBertTokenizer;
 
@@ -10,13 +11,31 @@ internal class PreTokenizer
 {
     public delegate bool ReadOnlySpanFunc<T>(ReadOnlySpan<T> span);
 
+    public static void PreTokenize(string input, ReadOnlySpanFunc<char> processToken, bool convertToLowercase, NormalizationForm vocabNf)
+    {
+        // The BertTokenizer itself will try normalizing the string if it can not find a matching token id in the vocabulary.
+        // If the vocabulary uses FormD and our input is in FormC, we will not find a matching token id for the input as the composed
+        // chars are not contained in the dictionary then. Thus, we don't need to normalize and copy memory here, as we can handle
+        // this for the individual tokens later on.
+        // If the vocabulary uses FormC and our input is in FormD, we need to normalize here, as we might be able to encode the
+        // FormD variant while there might be a more specific FormC vocabulary match which we couldn't find due to wrong normalization.
+        // The KC and KD variants need to be normalized here as well.
+        if (vocabNf == NormalizationForm.FormD || input.IsNormalized(vocabNf))
+        {
+            PreTokenize(input, processToken, convertToLowercase);
+            return;
+        }
+
+        PreTokenize(input.Normalize(vocabNf), processToken, convertToLowercase);
+    }
+
     /// <summary>
     /// Pre-tokenize text input. Turns sentences into words and punctuation, removes whitespace. Allocation free.
     /// </summary>
     /// <param name="input">Input to pre-tokenize.</param>
     /// <param name="processToken">A function to process the next token. Pre-tokenization is stopped as soon as the function returns false.</param>
     /// <param name="convertToLowercase">Convert word tokens to lowercase before further processing.</param>
-    public static void PreTokenize(ReadOnlySpan<char> input, ReadOnlySpanFunc<char> processToken, bool convertToLowercase)
+    private static void PreTokenize(ReadOnlySpan<char> input, ReadOnlySpanFunc<char> processToken, bool convertToLowercase)
     {
         var start = -1;
         int i;
@@ -88,7 +107,7 @@ internal class PreTokenizer
     /// <param name="cp">Character to check.</param>
     /// <returns>True we consider the character a punctuation character, otherwise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsPunctuation(char cp)
+    private static bool IsPunctuation(char cp)
     {
         // We treat all non-letter/number ASCII as punctuation.
         // Characters such as "^", "$", and "`" are not in the Unicode
@@ -108,7 +127,7 @@ internal class PreTokenizer
     /// <param name="cp">Char to check.</param>
     /// <returns>True if passed char is a chinese char.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsChineseCharacter(char cp)
+    private static bool IsChineseCharacter(char cp)
     {
         // This defines a "chinese character" as anything in the CJK Unicode block:
         //   https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)

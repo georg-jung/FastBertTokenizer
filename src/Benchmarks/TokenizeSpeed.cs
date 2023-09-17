@@ -97,7 +97,7 @@ public class TokenizeSpeed
     {
         // this might be interesting to benchmark but doesn't make much sense as a real world use case
         List<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> res = new(_corpus.Count);
-        var x = _corpus.Select(x => x.AsMemory()).AsParallel().AsOrdered().Select(x => _tokenizer.Tokenize(x.Span, _maxSequenceLength));
+        var x = _corpus.AsParallel().AsOrdered().Select(x => _tokenizer.Tokenize(x, _maxSequenceLength));
         res.AddRange(x);
         return res;
     }
@@ -111,7 +111,7 @@ public class TokenizeSpeed
         var toktyp = new long[_maxSequenceLength * batchSize];
         Array.Fill(toktyp, 0);
 
-        foreach (var batch in _corpus.Select(x => x.AsMemory()).Buffer(batchSize).Cast<IReadOnlyList<ReadOnlyMemory<char>>>())
+        foreach (var batch in _corpus.Buffer(batchSize).Cast<IReadOnlyList<string>>())
         {
             var batchSeqLen = _maxSequenceLength * batch.Count;
             var iidsM = iids.AsMemory(0, batchSeqLen);
