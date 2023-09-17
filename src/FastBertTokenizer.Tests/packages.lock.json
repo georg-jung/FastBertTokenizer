@@ -79,6 +79,16 @@
         "resolved": "2.5.0",
         "contentHash": "+Gp9vuC2431yPyKB15YrOTxCuEAErBQUTIs6CquumX1F073UaPHGW0VE/XVJLMh9W4sXdz3TBkcHdFWZrRn2Hw=="
       },
+      "Xunit.SkippableFact": {
+        "type": "Direct",
+        "requested": "[1.4.13, )",
+        "resolved": "1.4.13",
+        "contentHash": "IyzZNvJEtXGlXrzxDiSbtH5Lyxf4iJdRQADuyjGdDf00LjXRLJwIoezQNFhFGKTMtvk8IIgaSHxW4mAV4O7b8A==",
+        "dependencies": {
+          "Validation": "2.4.18",
+          "xunit.extensibility.execution": "2.4.0"
+        }
+      },
       "Argon": {
         "type": "Transitive",
         "resolved": "0.9.0",
@@ -1066,6 +1076,11 @@
           "System.Threading": "4.3.0",
           "System.Xml.ReaderWriter": "4.3.0"
         }
+      },
+      "Validation": {
+        "type": "Transitive",
+        "resolved": "2.4.18",
+        "contentHash": "NfvWJ1QeuZ1FQCkqgXTu1cOkRkbNCfxs4Tat+abXLwom6OXbULVhRGp34BTvVB4XPxj6VIAl7KfLfStXMt/Ehw=="
       },
       "Verify": {
         "type": "Transitive",
