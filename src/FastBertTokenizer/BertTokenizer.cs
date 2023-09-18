@@ -21,6 +21,31 @@ public partial class BertTokenizer
     private bool _lowercaseInput;
     private NormalizationForm _normalization;
 
+    /// <summary>
+    /// Encode the given input string to token ids per the loaded vocabulary. Write the results to the
+    /// given memory areas. When encoding multiple inputs successivly it is more efficient to reuse the
+    /// memory for the results than allocating new memory and returing new arrays.
+    /// </summary>
+    /// <param name="input">The input to encode.</param>
+    /// <param name="inputIds">
+    /// The resulting token ids/input_ids will be written here. The token_ids
+    /// list will be truncated (and correctly ended with a [SEP] token) if the
+    /// input translates to more tokens than the list can hold.
+    /// </param>
+    /// <param name="attentionMask">
+    /// The attention mask for the given input will be written here. At the positions
+    /// of padding tokens in <paramref name="inputIds"/> attention mask will be 0.
+    /// All other (relevant/interesting) positions will have a value of 1.
+    /// </param>
+    /// <param name="tokenTypeIds">
+    /// Will be filled with 0s. Use the overload without this parameter for optimized speed.
+    /// Some models which can take multiple sequences as input might need this but this is
+    /// currently not supported by FastBertTokenizer.
+    /// </param>
+    /// <param name="padTo">
+    /// Fill the given destination memory areas with padding tokens up to this length.
+    /// </param>
+    /// <returns>The number of token ids produced.</returns>
     public int Tokenize(string input, Memory<long> inputIds, Span<long> attentionMask, Span<long> tokenTypeIds, int? padTo = null)
     {
         var inputIdCnt = Tokenize(input, inputIds, attentionMask, padTo);
@@ -29,6 +54,7 @@ public partial class BertTokenizer
         return inputIdCnt;
     }
 
+    /// <inheritdoc cref="Tokenize(string, Memory{long}, Span{long}, Span{long}, int?)"/>
     public int Tokenize(string input, Memory<long> inputIds, Span<long> attentionMask, int? padTo = null)
     {
         var (inputIdCnt, nonPaddedCnt) = Tokenize(input, inputIds, padTo);
@@ -37,6 +63,15 @@ public partial class BertTokenizer
         return inputIdCnt;
     }
 
+    /// <summary>
+    /// Encode the given input string to token ids per the loaded vocabulary. This overload allocated new memory to write its results to.
+    /// Thus, it is less efficient than the overloads that take memory areas to write to. Consider using those if you need to encode multiple
+    /// inputs successivly.
+    /// </summary>
+    /// <param name="input">The input to encode.</param>
+    /// <param name="maximumTokens">The maximum number of token ids to encode. Most bert models support inputs of up to 512 tokens.</param>
+    /// <param name="padTo">Create an input_ids array of at least this length and fill possible unused positions at the end with the padding token id.</param>
+    /// <returns>input_ids, attention_mask and token_type_ids that might be passed to typical BERT models.</returns>
     public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) Tokenize(string input, int maximumTokens = 512, int? padTo = null)
     {
         var inputIds = new long[maximumTokens];
