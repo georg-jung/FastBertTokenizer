@@ -7,6 +7,8 @@ namespace FastBertTokenizer;
 
 public partial class BertTokenizer
 {
+    private (int Count, Tuple<int, int>[] Ranges)? _rangeCache;
+
     /// <summary>
     /// Encode the given batch of input strings to token ids per the loaded vocabulary using
     /// multiple threads in parallel. Write the results to the given memory areas. When encoding
@@ -39,9 +41,9 @@ public partial class BertTokenizer
     /// The maximum number of token ids to produce for every single input in the batch.
     /// Most BERT models support a maximum of 512 tokens per input.
     /// </param>
-    public void Tokenize(IReadOnlyList<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, Memory<long> tokenTypeIds, int maximumTokens = 512)
+    public void Tokenize(ReadOnlyMemory<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, Memory<long> tokenTypeIds, int maximumTokens = 512)
     {
-        var resultLen = maximumTokens * inputs.Count;
+        var resultLen = maximumTokens * inputs.Length;
         if (tokenTypeIds.Length != resultLen)
         {
             throw new ArgumentException($"{nameof(tokenTypeIds)} must have {resultLen} elements but had {tokenTypeIds.Length}.", nameof(tokenTypeIds));
@@ -51,17 +53,26 @@ public partial class BertTokenizer
         tokenTypeIds.Span.Fill(0);
     }
 
-    /// <inheritdoc cref="Tokenize(IReadOnlyList{string}, Memory{long}, Memory{long}, Memory{long}, int)"/>
-    public void Tokenize(IReadOnlyList<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, int maximumTokens = 512)
+    /// <inheritdoc cref="Tokenize(ReadOnlyMemory{string}, Memory{long}, Memory{long}, Memory{long}, int)"/>
+    public void Tokenize(ReadOnlyMemory<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, int maximumTokens = 512)
     {
-        var resultLen = maximumTokens * inputs.Count;
+        var resultLen = maximumTokens * inputs.Length;
         if (inputIds.Length != resultLen || attentionMask.Length != resultLen)
         {
             throw new ArgumentException($"{nameof(inputIds)} and {nameof(attentionMask)} must have {resultLen} elements, but had {inputIds.Length} and {attentionMask.Length}.");
         }
 
-        var rangePartitioner = Partitioner.Create(0, inputs.Count);
-        var ranges = rangePartitioner.GetDynamicPartitions().ToArray();
+        Tuple<int, int>[] ranges;
+        if (_rangeCache is { } rc && rc.Count == inputs.Length)
+        {
+            ranges = rc.Ranges;
+        }
+        else
+        {
+            ranges = Partitioner.Create(0, inputs.Length).GetDynamicPartitions().ToArray();
+            _rangeCache = (inputs.Length, ranges);
+        }
+
         using var cde = new CountdownEvent(ranges.Length);
         foreach (var range in ranges)
         {
@@ -72,10 +83,11 @@ public partial class BertTokenizer
 
         void ParallelBody((int StartInclusive, int EndExclusive) param)
         {
+            var inputSpan = inputs.Span;
             for (var i = param.StartInclusive; i < param.EndExclusive; i++)
             {
                 var startIdx = maximumTokens * i;
-                var (_, nonPad) = Tokenize(inputs[i], inputIds.Slice(startIdx, maximumTokens), maximumTokens);
+                var (_, nonPad) = Tokenize(inputSpan[i], inputIds.Slice(startIdx, maximumTokens), maximumTokens);
                 var span = attentionMask.Slice(startIdx, maximumTokens).Span;
                 span.Slice(0, nonPad).Fill(1);
                 span.Slice(nonPad, maximumTokens - nonPad).Fill(0);

@@ -20,7 +20,7 @@ namespace Benchmarks;
 */
 public class TokenizeSpeed
 {
-    private readonly List<string> _corpus;
+    private readonly string[] _corpus;
     private readonly List<string> _otherLibCorpus;
     private readonly ConcreteUncasedTokenizer _otherLibTokenizer;
     private readonly BertTokenizer _tokenizer;
@@ -38,17 +38,20 @@ public class TokenizeSpeed
         using var uncompress = new BrotliStream(fs, CompressionMode.Decompress);
         var dict = JsonSerializer.Deserialize<Dictionary<int, string>>(uncompress)!;
 
-        _corpus = new(dict.Count);
+        _corpus = new string[dict.Count];
         _otherLibCorpus = new(dict.Count);
+        var cnt = 0;
         foreach (var tx in dict.Values)
         {
-            _corpus.Add(tx);
+            _corpus[cnt] = tx;
 
             // this preprocessing gives the other lib kind of an unfair advantage, but it throws otherwise
             var otherLib = tx.Substring(0, Math.Min(tx.Length, 1250)); // other lib throw if text is too long; 1250 works with 512 tokens, 1500 doesn't; 5000 works with 2048 tokens
             otherLib = Regex.Replace(otherLib, @"\s+", " "); // required due to bad whitespace processing of other lib
             otherLib = Regex.Replace(otherLib, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters
             _otherLibCorpus.Add(otherLib);
+
+            cnt++;
         }
 
         _otherLibTokenizer = new(vocabTxtFile);
@@ -87,7 +90,7 @@ public class TokenizeSpeed
     [Benchmark(Baseline = true)]
     public IReadOnlyCollection<object> FastBertTokenizerSinglethreadedAllocating()
     {
-        List<object> res = new(_corpus.Count);
+        List<object> res = new(_corpus.Length);
         foreach (var text in _corpus)
         {
             res.Add(_tokenizer.Tokenize(text, _maxSequenceLength));
@@ -115,7 +118,7 @@ public class TokenizeSpeed
     public IReadOnlyCollection<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> FastBertTokenizerMultithreadedAllocating()
     {
         // this might be interesting to benchmark but doesn't make much sense as a real world use case
-        List<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> res = new(_corpus.Count);
+        List<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> res = new(_corpus.Length);
         var x = _corpus.AsParallel().AsOrdered().Select(x => _tokenizer.Tokenize(x, _maxSequenceLength));
         res.AddRange(x);
         return res;
@@ -130,12 +133,14 @@ public class TokenizeSpeed
         var toktyp = new long[_maxSequenceLength * batchSize];
         Array.Fill(toktyp, 0);
 
-        foreach (var batch in _corpus.Buffer(batchSize).Cast<IReadOnlyList<string>>())
+        var corpMem = _corpus.AsMemory();
+        for (var i = 0; i < corpMem.Length; i += batchSize)
         {
-            var batchSeqLen = _maxSequenceLength * batch.Count;
+            var len = Math.Min(batchSize, corpMem.Length - i);
+            var batchSeqLen = _maxSequenceLength * len;
             var iidsM = iids.AsMemory(0, batchSeqLen);
             var attmM = attm.AsMemory(0, batchSeqLen);
-            _tokenizer.Tokenize(batch, iidsM, attmM, _maxSequenceLength);
+            _tokenizer.Tokenize(corpMem.Slice(i, len), iidsM, attmM, _maxSequenceLength);
         }
 
         return (iids.AsMemory(), attm.AsMemory(), toktyp.AsMemory());
