@@ -1,6 +1,8 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
+
 namespace FastBertTokenizer;
 
 public partial class BertTokenizer
@@ -58,13 +60,28 @@ public partial class BertTokenizer
             throw new ArgumentException($"{nameof(inputIds)} and {nameof(attentionMask)} must have {resultLen} elements, but had {inputIds.Length} and {attentionMask.Length}.");
         }
 
-        inputs.Select((x, i) => (InputIds: x, i)).AsParallel().ForAll(x =>
+        var rangePartitioner = Partitioner.Create(0, inputs.Count);
+        var ranges = rangePartitioner.GetDynamicPartitions().ToArray();
+        using var cde = new CountdownEvent(ranges.Length);
+        foreach (var range in ranges)
         {
-            var startIdx = maximumTokens * x.i;
-            var (_, nonPad) = Tokenize(x.InputIds, inputIds.Slice(startIdx, maximumTokens), maximumTokens);
-            var span = attentionMask.Slice(startIdx, maximumTokens).Span;
-            span.Slice(0, nonPad).Fill(1);
-            span.Slice(nonPad, maximumTokens - nonPad).Fill(0);
-        });
+            ThreadPool.QueueUserWorkItem(ParallelBody, (range.Item1, range.Item2), false);
+        }
+
+        cde.Wait();
+
+        void ParallelBody((int StartInclusive, int EndExclusive) param)
+        {
+            for (var i = param.StartInclusive; i < param.EndExclusive; i++)
+            {
+                var startIdx = maximumTokens * i;
+                var (_, nonPad) = Tokenize(inputs[i], inputIds.Slice(startIdx, maximumTokens), maximumTokens);
+                var span = attentionMask.Slice(startIdx, maximumTokens).Span;
+                span.Slice(0, nonPad).Fill(1);
+                span.Slice(nonPad, maximumTokens - nonPad).Fill(0);
+            }
+
+            cde.Signal();
+        }
     }
 }

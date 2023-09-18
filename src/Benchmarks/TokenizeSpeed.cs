@@ -124,7 +124,7 @@ public class TokenizeSpeed
     [Benchmark]
     public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) FastBertTokenizerMultithreadedMemReuse()
     {
-        var batchSize = 100;
+        var batchSize = 1000;
         var iids = new long[_maxSequenceLength * batchSize];
         var attm = new long[_maxSequenceLength * batchSize];
         var toktyp = new long[_maxSequenceLength * batchSize];
