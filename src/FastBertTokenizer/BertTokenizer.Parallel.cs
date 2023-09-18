@@ -60,6 +60,35 @@ public partial class BertTokenizer
             throw new ArgumentException($"{nameof(inputIds)} and {nameof(attentionMask)} must have {resultLen} elements, but had {inputIds.Length} and {attentionMask.Length}.");
         }
 
+        /*
+        //var rangePartitioner = Partitioner.Create(0, inputs.Count);
+        //Parallel.ForEach(rangePartitioner, range =>
+        //{
+        //    ParallelBody(range.Item1, range.Item2);
+        //});
+        //Enumerable.Range(0, 50).Bat
+        var partitions = Environment.ProcessorCount * 3;
+        using var cde = new CountdownEvent(partitions);
+        var ranges = EnumerateRanges(inputs.Count, partitions).ToArray();
+        //Parallel.ForEach(ranges, ParallelBody);
+        //Task.WaitAll(ranges.Select(x => Task.Run(() => ParallelBody(x))).ToArray());
+        //ranges.Select(x => );
+        foreach (var range in ranges)
+        {
+            ThreadPool.QueueUserWorkItem(ParallelBody, range, false);
+        }
+
+        cde.Wait();*/
+
+        //var rangePartitioner = Partitioner.Create(0, inputs.Count);
+        //var tasks = rangePartitioner.GetDynamicPartitions().Select(range => Task.Run(() => ParallelBody((range.Item1, range.Item2)))).ToArray();
+        //Task.WaitAll(tasks);
+        //foreach (var range in rangePartitioner.GetDynamicPartitions())
+        //{
+        //    Task.Run(() => ParallelBody(range.Item1, range.Item2));
+        //    ThreadPool.QueueUserWorkItem(ParallelBody, (range.Item1, range.Item2), false);
+        //}
+
         var rangePartitioner = Partitioner.Create(0, inputs.Count);
         var ranges = rangePartitioner.GetDynamicPartitions().ToArray();
         using var cde = new CountdownEvent(ranges.Length);
@@ -82,6 +111,29 @@ public partial class BertTokenizer
             }
 
             cde.Signal();
+        }
+    }
+
+    private static IEnumerable<(int StartInclusive, int EndExclusive)> EnumerateRanges(int n, int partions)
+    {
+        int size = n / partions;
+        int remainder = n % partions;
+
+        int start = 0;
+        for (int i = 0; i < partions; i++)
+        {
+            int end = start + size;
+
+            // Distribute the remainder across the ranges
+            if (remainder > 0)
+            {
+                end++;
+                remainder--;
+            }
+
+            yield return (start, end);
+
+            start = end;
         }
     }
 }
