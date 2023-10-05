@@ -14,7 +14,7 @@
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
   </ItemGroup>
   <ItemGroup>
-    <PackageVersion Include="BenchmarkDotNet" Version="0.13.8" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.13.9" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.8" />
     <PackageVersion Include="BERTTokenizers" Version="1.2.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.0" />
