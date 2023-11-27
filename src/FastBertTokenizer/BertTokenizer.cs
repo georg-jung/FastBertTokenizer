@@ -230,7 +230,7 @@ public partial class BertTokenizer
         }
 
         int i = 0;
-        Span<char> span = normalizedString.Length < 1000
+        Span<char> span = normalizedString.Length < Constants.StackallocCharThreshold
             ? stackalloc char[normalizedString.Length]
             : new char[normalizedString.Length];
 
