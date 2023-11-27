@@ -1,0 +1,33 @@
+name: Benchmark Rust
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+        lfs: true
+    - uses: dotnet/nbgv@v0.4
+      id: nbgv
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: |
+          src/HuggingfaceTokenizer/BenchRust
+    - run: cargo build --release
+      working-directory: src/HuggingfaceTokenizer/BenchRust
+    - run: cargo run --release
+      working-directory: src/HuggingfaceTokenizer/BenchRust
+    - run: cargo bench
+      working-directory: src/HuggingfaceTokenizer/BenchRust
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: criterion-reports-${{ steps.nbgv.outputs.Version }}
+        path: src/HuggingfaceTokenizer/BenchRust/target/criterion/**/*
