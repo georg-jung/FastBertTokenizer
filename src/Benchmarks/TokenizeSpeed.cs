@@ -1,14 +1,9 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.IO.Compression;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
-using BERTTokenizers.Base;
 using FastBertTokenizer;
-using RustLibWrapper;
 
 namespace Benchmarks;
 
@@ -20,75 +15,35 @@ namespace Benchmarks;
 */
 public class TokenizeSpeed
 {
-    private readonly string[] _corpus;
-    private readonly List<string> _otherLibCorpus;
-    private readonly ConcreteUncasedTokenizer _otherLibTokenizer;
     private readonly BertTokenizer _tokenizer;
+    private readonly string _corpusPath;
+    private readonly string _vocabTxtFile;
     private readonly int _maxSequenceLength;
+    private string[] _corpus = null!;
 
     public TokenizeSpeed()
-        : this("data/wiki-simple.json.br", "data/baai-bge-small-en-vocab.txt", "data/baai-bge-small-en-tokenizer.json", 512)
+        : this("data/wiki-simple.json.br", "data/baai-bge-small-en-vocab.txt", 512)
     {
     }
 
-    public TokenizeSpeed(string corpusPath, string vocabTxtFile, string tokenizerJsonPath, int maxSequenceLength)
+    public TokenizeSpeed(string corpusPath, string vocabTxtFile, int maxSequenceLength)
     {
-        RustTokenizer.LoadTokenizer(tokenizerJsonPath, maxSequenceLength);
-        using var fs = File.OpenRead(corpusPath);
-        using var uncompress = new BrotliStream(fs, CompressionMode.Decompress);
-        var dict = JsonSerializer.Deserialize<Dictionary<int, string>>(uncompress)!;
-
-        _corpus = new string[dict.Count];
-        _otherLibCorpus = new(dict.Count);
-        var cnt = 0;
-        foreach (var tx in dict.Values)
-        {
-            _corpus[cnt] = tx;
-
-            // this preprocessing gives the other lib kind of an unfair advantage, but it throws otherwise
-            var otherLib = tx.Substring(0, Math.Min(tx.Length, 1250)); // other lib throw if text is too long; 1250 works with 512 tokens, 1500 doesn't; 5000 works with 2048 tokens
-            otherLib = Regex.Replace(otherLib, @"\s+", " "); // required due to bad whitespace processing of other lib
-            otherLib = Regex.Replace(otherLib, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // other lib doesn't handle unknown characters
-            _otherLibCorpus.Add(otherLib);
-
-            cnt++;
-        }
-
-        _otherLibTokenizer = new(vocabTxtFile);
-        _tokenizer = new();
-
-        using var sr = File.OpenText(vocabTxtFile);
-        _tokenizer.LoadVocabulary(sr, true);
+        _corpusPath = corpusPath;
+        _vocabTxtFile = vocabTxtFile;
         _maxSequenceLength = maxSequenceLength;
+        _tokenizer = new();
     }
 
-    [Benchmark]
-    public IReadOnlyCollection<object> OtherLib()
+    [GlobalSetup]
+    public async Task SetupAsync()
     {
-        List<object> res = new(_otherLibCorpus.Count);
-        foreach (var text in _otherLibCorpus)
-        {
-            res.Add(_otherLibTokenizer.Encode(_maxSequenceLength, text));
-        }
-
-        return res;
-    }
-
-    [Benchmark]
-    public object RustHuggingfaceWrapperSinglethreadedMemReuse()
-    {
-        var inputIds = new uint[_maxSequenceLength];
-        var attMask = new uint[_maxSequenceLength];
-        foreach (var text in _otherLibCorpus)
-        {
-            RustTokenizer.TokenizeAndGetIds(text, inputIds.AsSpan(), attMask.AsSpan());
-        }
-
-        return (inputIds, attMask);
+        using var sr = File.OpenText(_vocabTxtFile);
+        _tokenizer.LoadVocabulary(sr, true);
+        _corpus = await CorpusReader.ReadBrotliJsonCorpusAsync(_corpusPath);
     }
 
     [Benchmark(Baseline = true)]
-    public IReadOnlyCollection<object> FastBertTokenizerSinglethreadedAllocating()
+    public IReadOnlyCollection<object> SinglethreadedAllocating()
     {
         List<object> res = new(_corpus.Length);
         foreach (var text in _corpus)
@@ -100,7 +55,7 @@ public class TokenizeSpeed
     }
 
     [Benchmark]
-    public object FastBertTokenizerSingleThreadedMemReuse()
+    public object SingleThreadedMemReuse()
     {
         var iids = new long[_maxSequenceLength];
         var attm = new long[_maxSequenceLength];
@@ -115,7 +70,7 @@ public class TokenizeSpeed
     }
 
     [Benchmark]
-    public IReadOnlyCollection<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> FastBertTokenizerMultithreadedAllocating()
+    public IReadOnlyCollection<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> MultithreadedAllocating()
     {
         // this might be interesting to benchmark but doesn't make much sense as a real world use case
         List<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> res = new(_corpus.Length);
@@ -125,7 +80,7 @@ public class TokenizeSpeed
     }
 
     [Benchmark]
-    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) FastBertTokenizerMultithreadedMemReuse()
+    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) MultithreadedMemReuse()
     {
         var batchSize = 1000;
         var iids = new long[_maxSequenceLength * batchSize];
@@ -144,13 +99,5 @@ public class TokenizeSpeed
         }
 
         return (iids.AsMemory(), attm.AsMemory(), toktyp.AsMemory());
-    }
-
-    private sealed class ConcreteUncasedTokenizer : UncasedTokenizer
-    {
-        public ConcreteUncasedTokenizer(string vocabularyFilePath)
-            : base(vocabularyFilePath)
-        {
-        }
     }
 }
