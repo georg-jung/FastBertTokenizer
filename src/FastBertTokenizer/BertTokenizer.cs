@@ -155,14 +155,14 @@ public partial class BertTokenizer
             used = strideInputIds.Length + 1;
         }
 
-        var (_, nonPaddedCnt) = Tokenize(input, inputOffset, inputIds.Slice(used), out var lastTokenizedWordStartIndex, inputIds.Length - used, includePartialLastWord: true, emitClsToken: used == 0);
+        var (_, nonPaddedCnt) = Tokenize(input, inputOffset, inputIds.Slice(used), out var lastTokenizedWordStartIndex, inputIds.Length - used, emitClsToken: used == 0);
         attentionMask.Slice(0, used + nonPaddedCnt).Fill(1);
         attentionMask.Slice(used + nonPaddedCnt).Fill(0);
 
         return new TokenizedRange<TKey>(inputKey, inputOffset, lastTokenizedWordStartIndex);
     }
 
-    private (int Length, int NonPadding) Tokenize(string input, int inputOffset, Span<long> inputIds, out int? lastTokenizedWordStartIndex, int? padTo = null, bool includePartialLastWord = true, bool emitClsToken = true)
+    private (int Length, int NonPadding) Tokenize(string input, int inputOffset, Span<long> inputIds, out int? nextIndexToTokenize, int? padTo = null, bool emitClsToken = true)
     {
         _ = _prefixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
@@ -175,46 +175,23 @@ public partial class BertTokenizer
             inputIds[0] = _cls.Id;
         }
 
-        lastTokenizedWordStartIndex = 0;
         bool moreRemainingInput = false;
+        int offset = 0;
         foreach (var pivot in new PreTokenizingEnumerator(input, _lowercaseInput, _normalization, inputOffset))
         {
-            lastTokenizedWordStartIndex = pivot.SegmentStartIndex;
-            var added = TokenizeSubword(pivot.Segment, inputIds.Slice(inputIdCnt, inputIds.Length - inputIdCnt));
-
-            // subword was/needs to be cut off because it was to long
-            if (inputIdCnt + added + 1 > maximumTokens)
-            {
-                moreRemainingInput = true;
-
-                // HuggingFace tokenizer does add partial words.
-                if (includePartialLastWord)
-                {
-                    inputIdCnt = maximumTokens - 1; // leave one out for the final [SEP] token
-                    break;
-                }
-                else
-                {
-                    inputIds.Slice(inputIdCnt).Fill(_pad.Id);
-                    break;
-                }
-            }
+            offset = pivot.SegmentStartIndex;
+            var added = TokenizeSubword(pivot.Segment, inputIds.Slice(inputIdCnt, inputIds.Length - inputIdCnt - 1), ref offset);
 
             inputIdCnt += added;
 
-            // subword fitted exactly
             if (inputIdCnt + 1 == maximumTokens)
             {
-                moreRemainingInput = input.Length > pivot.SegmentStartIndex + pivot.Segment.Length;
+                moreRemainingInput = input.Length > offset;
                 break;
             }
         }
 
-        if (!moreRemainingInput)
-        {
-            lastTokenizedWordStartIndex = null;
-        }
-
+        nextIndexToTokenize = moreRemainingInput ? offset : null;
         inputIds[inputIdCnt] = _sep.Id;
         inputIdCnt++;
         var nonPaddedCnt = inputIdCnt;
@@ -357,9 +334,9 @@ public partial class BertTokenizer
         return new string(span.Slice(0, i)).Normalize(targetNf);
     }
 
-    private int TokenizeSubword(ReadOnlySpan<char> word, Span<long> tokenIdSink)
+    private int TokenizeSubword(ReadOnlySpan<char> word, Span<long> tokenIdSink, ref int offset)
     {
-        int OnUnknown(ReadOnlySpan<char> word, Span<long> tokenIdSink)
+        int OnUnknown(ReadOnlySpan<char> word, Span<long> tokenIdSink, ref int offset)
         {
             if (RemoveControlAndReplacement(word, out var withoutControl))
             {
@@ -368,7 +345,7 @@ public partial class BertTokenizer
                     return 0;
                 }
 
-                return TokenizeSubword(withoutControl, tokenIdSink);
+                return TokenizeSubword(withoutControl, tokenIdSink, ref offset);
             }
 
             // Normalize and IsNormalized for ReadOnlySpan<char> is not yet implemented:
@@ -379,16 +356,17 @@ public partial class BertTokenizer
             var wordStr = word.ToString();
             if (!wordStr.IsNormalized(_normalization))
             {
-                return TokenizeSubword(wordStr.Normalize(_normalization), tokenIdSink);
+                return TokenizeSubword(wordStr.Normalize(_normalization), tokenIdSink, ref offset);
             }
 
             var withoutDiacrit = RemoveDiacritics(wordStr, _normalization);
             if (!MemoryExtensions.Equals(withoutDiacrit, word, StringComparison.Ordinal))
             {
-                return TokenizeSubword(withoutDiacrit.AsSpan(), tokenIdSink);
+                return TokenizeSubword(withoutDiacrit.AsSpan(), tokenIdSink, ref offset);
             }
 
             tokenIdSink[0] = _unk.Id;
+            offset += word.Length;
             return 1;
         }
 
@@ -411,13 +389,14 @@ public partial class BertTokenizer
 
         if (id == -1)
         {
-            return OnUnknown(word, tokenIdSink);
+            return OnUnknown(word, tokenIdSink, ref offset);
         }
 
         tokenIdSink[0] = id;
         cnt++;
 
         var remaining = word.Slice(prefix.Length);
+        offset += prefix.Length;
         while (remaining.Length > 0 && cnt < tokenIdSink.Length)
         {
             var suffix = remaining;
@@ -437,12 +416,13 @@ public partial class BertTokenizer
 
             if (id == -1)
             {
-                return OnUnknown(word, tokenIdSink);
+                return OnUnknown(word, tokenIdSink, ref offset);
             }
 
             tokenIdSink[cnt] = id;
             cnt++;
             remaining = remaining.Slice(suffix.Length);
+            offset += suffix.Length;
         }
 
         return cnt;
