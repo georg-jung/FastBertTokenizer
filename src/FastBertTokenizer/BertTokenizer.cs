@@ -106,22 +106,31 @@ public partial class BertTokenizer
             _tokenTypeIdsReturnBuffer.AsMemory(0, inputIdCnt));
     }
 
-    private (int Length, int NonPadding) Tokenize(string input, int inputOffset, Span<long> inputIds, out int? lastTokenizedWordStartIndex, int? padTo = null, bool includePartialLastWord = true)
+    private (int Length, int NonPadding) Tokenize(string input, int inputOffset, Span<long> inputIds, out int? lastTokenizedWordStartIndex, int? padTo = null, bool includePartialLastWord = true, bool emitClsToken = true)
     {
         _ = _prefixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
 
         var maximumTokens = inputIds.Length;
-        var inputIdCnt = 1;
-        inputIds[0] = _cls.Id;
+        var inputIdCnt = 0;
+        if (emitClsToken)
+        {
+            inputIdCnt++;
+            inputIds[0] = _cls.Id;
+        }
 
         lastTokenizedWordStartIndex = 0;
+        bool moreRemainingInput = false;
         foreach (var pivot in new PreTokenizingEnumerator(input, _lowercaseInput, _normalization, inputOffset))
         {
             lastTokenizedWordStartIndex = pivot.SegmentStartIndex;
             var added = TokenizeSubword(pivot.Segment, inputIds.Slice(inputIdCnt, inputIds.Length - inputIdCnt));
+
+            // subword was/needs to be cut off because it was to long
             if (inputIdCnt + added + 1 > maximumTokens)
             {
+                moreRemainingInput = true;
+
                 // HuggingFace tokenizer does add partial words.
                 if (includePartialLastWord)
                 {
@@ -136,10 +145,18 @@ public partial class BertTokenizer
             }
 
             inputIdCnt += added;
-            if (inputIdCnt + 1 >= maximumTokens)
+
+            // subword fitted exactly
+            if (inputIdCnt + 1 == maximumTokens)
             {
+                moreRemainingInput = input.Length > pivot.SegmentStartIndex + pivot.Segment.Length;
                 break;
             }
+        }
+
+        if (!moreRemainingInput)
+        {
+            lastTokenizedWordStartIndex = null;
         }
 
         inputIds[inputIdCnt] = _sep.Id;
