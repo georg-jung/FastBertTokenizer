@@ -1,6 +1,10 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#if NET8_0_OR_GREATER
+using System.Collections.Frozen;
+#endif
+
 using System.Globalization;
 using System.Text;
 
@@ -12,8 +16,13 @@ namespace FastBertTokenizer;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1204:Static elements should appear before instance elements", Justification = "Have private overload close to public one.")]
 public partial class BertTokenizer
 {
+#if NET8_0_OR_GREATER
+    private FrozenDictionary<string, long>? _prefixes;
+    private FrozenDictionary<string, long>? _suffixes;
+#else
     private Dictionary<string, long>? _prefixes;
     private Dictionary<string, long>? _suffixes;
+#endif
     private (int Id, string Token) _unk = default!;
     private (int Id, string Token) _cls = default!;
     private (int Id, string Token) _sep = default!;

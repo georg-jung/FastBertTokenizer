@@ -1,6 +1,10 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#if NET8_0_OR_GREATER
+using System.Collections.Frozen;
+#endif
+
 using System.Text;
 
 namespace FastBertTokenizer;
@@ -62,8 +66,8 @@ public partial class BertTokenizer
             throw new InvalidOperationException("Vocabulary already loaded.");
         }
 
-        _prefixes = new Dictionary<string, long>(StringComparer.Ordinal);
-        _suffixes = new Dictionary<string, long>(StringComparer.Ordinal);
+        var prefixes = new Dictionary<string, long>(StringComparer.Ordinal);
+        var suffixes = new Dictionary<string, long>(StringComparer.Ordinal);
         (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
         var i = 0;
 
@@ -73,7 +77,7 @@ public partial class BertTokenizer
             {
                 if (line.StartsWith("##", StringComparison.Ordinal))
                 {
-                    _suffixes[line[2..].Normalize(normalization)] = i;
+                    suffixes[line[2..].Normalize(normalization)] = i;
                 }
                 else if (line.Equals(unknownToken, StringComparison.Ordinal))
                 {
@@ -93,7 +97,7 @@ public partial class BertTokenizer
                 }
                 else
                 {
-                    _prefixes[line.Normalize(normalization)] = i;
+                    prefixes[line.Normalize(normalization)] = i;
                 }
             }
 
@@ -132,6 +136,13 @@ public partial class BertTokenizer
 
         void Finish()
         {
+#if NET8_0_OR_GREATER
+            _prefixes = prefixes.ToFrozenDictionary();
+            _suffixes = suffixes.ToFrozenDictionary();
+#else
+            _prefixes = prefixes;
+            _suffixes = suffixes;
+#endif
             _lowercaseInput = convertInputToLowercase;
             _normalization = normalization;
             _unk = (unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unknownToken}."), unknownToken);
