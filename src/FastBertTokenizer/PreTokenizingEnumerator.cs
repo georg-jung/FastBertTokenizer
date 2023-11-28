@@ -10,6 +10,7 @@ namespace FastBertTokenizer;
 internal ref struct PreTokenizingEnumerator
 {
     private readonly bool _convertToLowercase;
+    private readonly int _inputOffset;
     private readonly ReadOnlySpan<char> _input;
     private int start;
     private int currentIndex;
@@ -34,6 +35,7 @@ internal ref struct PreTokenizingEnumerator
         }
 
         _convertToLowercase = convertToLowercase;
+        _inputOffset = inputOffset;
         start = -1;
         currentIndex = 0;
         if (_convertToLowercase)
@@ -69,7 +71,7 @@ internal ref struct PreTokenizingEnumerator
                     return true;
                 }
 
-                Current = new() { Segment = _input.Slice(currentIndex, 1), SegmentStartIndex = currentIndex };
+                Current = new() { Segment = _input.Slice(currentIndex, 1), SegmentStartIndex = currentIndex + _inputOffset };
                 currentIndex++;
                 return true;
             }
@@ -109,11 +111,11 @@ internal ref struct PreTokenizingEnumerator
                     ExpandBuffer();
                 }
 
-                Current = new() { Segment = buffer.AsSpan(0, lowerLen), SegmentStartIndex = start };
+                Current = new() { Segment = buffer.AsSpan(0, lowerLen), SegmentStartIndex = start + _inputOffset };
             }
             else
             {
-                Current = new() { Segment = toProcess, SegmentStartIndex = start };
+                Current = new() { Segment = toProcess, SegmentStartIndex = start + _inputOffset };
             }
 
             start = -1;
