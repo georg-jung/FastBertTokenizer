@@ -4,6 +4,7 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
+using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Jobs;
 using FastBertTokenizer;
 
@@ -123,10 +124,12 @@ public class TokenizeSpeed
         public Config()
         {
             var baseJob = Job.Default;
-            var localJob = baseJob.WithCustomBuildConfiguration("LocalBuild").WithId("LocalBuild");
-            var nugetJob = baseJob.WithNuGet("FastBertTokenizer", "0.4.8-beta").WithId("Nuget-0.4.8-beta");
-            AddJob(localJob);
-            AddJob(nugetJob);
+            var localJob = baseJob.WithCustomBuildConfiguration("LocalBuild");
+            var nugetJob = baseJob.WithNuGet("FastBertTokenizer", "0.4.8-beta");
+            AddJob(localJob.WithRuntime(CoreRuntime.Core80));
+            AddJob(localJob.WithRuntime(CoreRuntime.Core70));
+            AddJob(nugetJob.WithRuntime(CoreRuntime.Core80));
+            AddJob(nugetJob.WithRuntime(CoreRuntime.Core70));
         }
     }
 }
