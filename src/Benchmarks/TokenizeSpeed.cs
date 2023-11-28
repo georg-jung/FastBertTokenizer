@@ -74,12 +74,15 @@ public class TokenizeSpeed
     }
 
     [Benchmark]
-    public IReadOnlyCollection<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> MultithreadedAllocating()
+    public IReadOnlyCollection<(ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds)> MultithreadedAllocating()
     {
         // this might be interesting to benchmark but doesn't make much sense as a real world use case
-        List<(Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds)> res = new(_corpus.Length);
-        var x = _corpus.AsParallel().AsOrdered().Select(x => _tokenizer.Tokenize(x, _maxSequenceLength));
-        res.AddRange(x);
+        List<(ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds)> res = new(_corpus.Length);
+        foreach(var x in _corpus.AsParallel().AsOrdered().Select(x => _tokenizer.Tokenize(x, _maxSequenceLength)))
+        {
+            res.Add(x);
+        }
+
         return res;
     }
 
