@@ -30,6 +30,12 @@ public partial class BertTokenizer
     private bool _lowercaseInput;
     private NormalizationForm _normalization;
 
+    // These will just be used if the consumer calls an API that _returns_ ReadOnlyMemory.
+    // They will be reused for subsequent calls to avoid allocations.
+    private long[]? _inputIdReturnBuffer = null;
+    private long[]? _attentionMaskReturnBuffer = null;
+    private long[]? _tokenTypeIdsReturnBuffer = null;
+
     /// <summary>
     /// Encode the given input string to token ids per the loaded vocabulary. Write the results to the
     /// given memory areas. When encoding multiple inputs successivly it is more efficient to reuse the
@@ -81,16 +87,23 @@ public partial class BertTokenizer
     /// <param name="maximumTokens">The maximum number of token ids to encode. Most bert models support inputs of up to 512 tokens.</param>
     /// <param name="padTo">Create an input_ids array of at least this length and fill possible unused positions at the end with the padding token id.</param>
     /// <returns>input_ids, attention_mask and token_type_ids that might be passed to typical BERT models.</returns>
-    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) Tokenize(string input, int maximumTokens = 512, int? padTo = null)
+    public (ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds) Tokenize(string input, int maximumTokens = 512, int? padTo = null)
     {
-        var inputIds = new long[maximumTokens];
-        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, 0, inputIds, out var _, padTo);
-        var attM = new long[inputIdCnt];
-        var tokTypI = new long[inputIdCnt];
-        Array.Fill(attM, 1, 0, nonPaddedCnt);
-        Array.Fill(attM, 0, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
-        Array.Fill(tokTypI, 0);
-        return (inputIds.AsMemory(0, inputIdCnt), attM, tokTypI);
+        if (_inputIdReturnBuffer is null || _inputIdReturnBuffer.Length < maximumTokens)
+        {
+            _inputIdReturnBuffer = new long[maximumTokens];
+            _attentionMaskReturnBuffer = new long[maximumTokens];
+            _tokenTypeIdsReturnBuffer = new long[maximumTokens];
+            Array.Fill(_tokenTypeIdsReturnBuffer, 0);
+        }
+
+        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, 0, _inputIdReturnBuffer, out var _, padTo);
+        Array.Fill(_attentionMaskReturnBuffer!, 1, 0, nonPaddedCnt);
+        Array.Fill(_attentionMaskReturnBuffer!, 0, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
+        return (
+            _inputIdReturnBuffer.AsMemory(0, inputIdCnt),
+            _attentionMaskReturnBuffer.AsMemory(0, inputIdCnt),
+            _tokenTypeIdsReturnBuffer.AsMemory(0, inputIdCnt));
     }
 
     private (int Length, int NonPadding) Tokenize(string input, int inputOffset, Span<long> inputIds, out int? lastTokenizedWordStartIndex, int? padTo = null, bool includePartialLastWord = true)
