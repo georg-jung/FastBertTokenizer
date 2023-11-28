@@ -1,7 +1,6 @@
-﻿// Copyright (c) Georg Jung. All rights reserved.
+// Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
@@ -32,16 +31,19 @@ public static partial class RustTokenizer
         }
     }
 
-    public static (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) TokenizeAndGetIds(string input, int maxTokenIds = 512)
+    public static (ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds) TokenizeAndGetIds(string input, int maxTokenIds = 512)
     {
         var ids = ArrayPool<uint>.Shared.Rent(maxTokenIds);
         var attentionMask = ArrayPool<uint>.Shared.Rent(maxTokenIds);
 
         try
         {
-            TokenizeAndGetIds(input, ids, attentionMask);
+            TokenizeAndGetIds(input, ids.AsSpan().Slice(0, maxTokenIds), attentionMask.AsSpan().Slice(0, maxTokenIds));
 
-            return (new Memory<long>(ids.Select(x => (long)x).ToArray()), new Memory<long>(attentionMask.Select(x => (long)x).ToArray()), new Memory<long>(new long[ids.Length]));
+            return (
+                new Memory<long>(ids.Select(x => (long)x).ToArray(), 0, maxTokenIds),
+                new Memory<long>(attentionMask.Select(x => (long)x).ToArray(), 0, maxTokenIds),
+                new Memory<long>(new long[maxTokenIds]));
         }
         finally
         {

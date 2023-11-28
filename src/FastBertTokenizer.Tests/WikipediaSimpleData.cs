@@ -10,13 +10,21 @@ public static class WikipediaSimpleData
 {
     private const string Path = "data/wiki-simple.json.br";
     private static readonly Lazy<List<object[]>> _articles = new(GetArticlesImpl);
+    private static readonly Lazy<Dictionary<int, string>> _articlesDict = new(GetArticlesDictImpl);
 
     public static IEnumerable<object[]> GetArticles() => _articles.Value;
 
+    public static IEnumerable<object[]> GetArticlesDict() => [new object[] { _articlesDict.Value }];
+
     private static List<object[]> GetArticlesImpl()
+    {
+        return _articlesDict.Value!.Select(x => new object[] { x.Key, x.Value }).ToList();
+    }
+
+    private static Dictionary<int, string> GetArticlesDictImpl()
     {
         using var fs = File.OpenRead(Path);
         using var uncompress = new BrotliStream(fs, CompressionMode.Decompress);
-        return JsonSerializer.Deserialize<Dictionary<int, string>>(uncompress)!.Select(x => new object[] { x.Key, x.Value }).ToList();
+        return JsonSerializer.Deserialize<Dictionary<int, string>>(uncompress)!;
     }
 }

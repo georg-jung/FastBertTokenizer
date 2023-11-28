@@ -15,6 +15,7 @@ namespace FastBertTokenizer.Tests
         public CompareToHuggingfaceTokenizer(BgeVocabFixture bgeVocab)
         {
             _bgeVocab = bgeVocab;
+            RustTokenizer.LoadTokenizer("data/baai-bge-small-en-tokenizer.json", 512);
         }
 
         [SkippableTheory]
