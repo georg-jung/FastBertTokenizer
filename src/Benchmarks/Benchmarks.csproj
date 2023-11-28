@@ -8,15 +8,27 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" />
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" />
-    <PackageReference Include="BERTTokenizers" />
-    <PackageReference Include="System.Interactive" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.10"/>
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.10" />
+    <PackageReference Include="BERTTokenizers" Version="1.2.0" />
+    <PackageReference Include="System.Interactive" Version="6.0.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(Configuration)' == 'LocalBuild' ">
+    <ProjectReference Include="..\FastBertTokenizer\FastBertTokenizer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(Configuration)' != 'LocalBuild' ">
+    <PackageReference Include="FastBertTokenizer" Version="0.4.8-beta" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FastBertTokenizer\FastBertTokenizer.csproj" />
     <ProjectReference Include="..\HuggingfaceTokenizer\RustLibWrapper\RustLibWrapper.csproj" />
   </ItemGroup>
 

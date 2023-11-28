@@ -1,14 +1,14 @@
 {
-  "version": 2,
+  "version": 1,
   "dependencies": {
     "net7.0": {
       "BenchmarkDotNet": {
         "type": "Direct",
-        "requested": "[0.13.8, )",
-        "resolved": "0.13.8",
-        "contentHash": "saXPKaCLYfeRIWnJ+BQFsdiFNMh3DDzsVp9bIZBs+frCODtZiVUX++z32nNPNaMjzNNH3SgIHRPoZb74LX30Uw==",
+        "requested": "[0.13.10, )",
+        "resolved": "0.13.10",
+        "contentHash": "p/LrTtR5TlwhZIvy2hG9VzTFWEDPS90r3QP9Q9pL4/B1iXzC/JNrpYyCWW3Xeg4vuiq/qV8hvJkJmT1sj+5LSw==",
         "dependencies": {
-          "BenchmarkDotNet.Annotations": "0.13.8",
+          "BenchmarkDotNet.Annotations": "0.13.10",
           "CommandLineParser": "2.9.1",
           "Gee.External.Capstone": "2.3.0",
           "Iced": "1.17.0",
@@ -22,11 +22,11 @@
       },
       "BenchmarkDotNet.Diagnostics.Windows": {
         "type": "Direct",
-        "requested": "[0.13.8, )",
-        "resolved": "0.13.8",
-        "contentHash": "lUFDzxlEx+CNnNJ8aF4wD1agSobwdraVJIsQTgEz2N3j7QRnQvjC6aTEGT/3Apt1+fNyJ9DDiO0h6eXBaJP41A==",
+        "requested": "[0.13.10, )",
+        "resolved": "0.13.10",
+        "contentHash": "NY/QR980KGH6un/+fhFchW/Nx0dagvhf/eLdr7YBT024NP5GhJKJxB4OZoct6wpq6tld4xaeKmpR1l8OWLeYtw==",
         "dependencies": {
-          "BenchmarkDotNet": "0.13.8",
+          "BenchmarkDotNet": "0.13.10",
           "Microsoft.Diagnostics.Tracing.TraceEvent": "3.0.2"
         }
       },
@@ -36,27 +36,11 @@
         "resolved": "1.2.0",
         "contentHash": "g9sA7AIvzc0lzt1JZ4XLsus67lKHcxRqYqIWCrVs/80WRLJMxeRVyGFps4ZHE4Qan1JeyKZOB5pzBvtL2SM9dQ=="
       },
-      "Microsoft.SourceLink.GitHub": {
+      "FastBertTokenizer": {
         "type": "Direct",
-        "requested": "[1.1.1, )",
-        "resolved": "1.1.1",
-        "contentHash": "IaJGnOv/M7UQjRJks7B6p7pbPnOwisYGOIzqCz5ilGFTApZ3ktOR+6zJ12ZRPInulBmdAf1SrGdDG2MU8g6XTw==",
-        "dependencies": {
-          "Microsoft.Build.Tasks.Git": "1.1.1",
-          "Microsoft.SourceLink.Common": "1.1.1"
-        }
-      },
-      "Nerdbank.GitVersioning": {
-        "type": "Direct",
-        "requested": "[3.6.133, )",
-        "resolved": "3.6.133",
-        "contentHash": "VZWMd5YAeDxpjWjAP/X6bAxnRMiEf6tES/ITN0X5CHJgkWLLeHGmEALivmTAfYM6P+P/3Szy6VCITUAkqjcHVw=="
-      },
-      "StyleCop.Analyzers.Unstable": {
-        "type": "Direct",
-        "requested": "[1.2.0.507, )",
-        "resolved": "1.2.0.507",
-        "contentHash": "gTY3IQdRqDJ4hbhSA3e/R48oE8b/OiKfvwkt1QdNVfrJK2gMHBV8ldaHJ885jxWZfllK66soa/sdcjh9bX49Tw=="
+        "requested": "[0.4.8-beta, )",
+        "resolved": "0.4.8-beta",
+        "contentHash": "QdNJRgW8kcibrla/o3G2Bn6UJb+7JuJF3/H1baxUL17dkwQtCEr88geUnjrxbrJ6nVwq+Xgnb1SMjDC0mEturw=="
       },
       "System.Interactive": {
         "type": "Direct",
@@ -66,8 +50,8 @@
       },
       "BenchmarkDotNet.Annotations": {
         "type": "Transitive",
-        "resolved": "0.13.8",
-        "contentHash": "ymeZAe2WIjjo6WZXdh7iWXX6ggn4EVJgfp0AVNGvQBTHhHr5HIY9zdTjuuk1qeGLZTPuxxpgk3vBAZO3huXBaQ=="
+        "resolved": "0.13.10",
+        "contentHash": "abYKp+P5NBuam7q0w7AFgOYF3nqAvKBw6MLq96Kjk1WdaRDNpgBc6uCgOP4pVIH/g0IF9d4ubnFLBwiJuIAHMw=="
       },
       "CommandLineParser": {
         "type": "Transitive",
@@ -88,11 +72,6 @@
         "type": "Transitive",
         "resolved": "1.1.0",
         "contentHash": "1Am6l4Vpn3/K32daEqZI+FFr96OlZkgwK2LcT3pZ2zWubR5zTPW3/FkO1Rat9kb7oQOa4rxgl9LJHc5tspCWfg=="
-      },
-      "Microsoft.Build.Tasks.Git": {
-        "type": "Transitive",
-        "resolved": "1.1.1",
-        "contentHash": "AT3HlgTjsqHnWpBHSNeR0KxbLZD7bztlZVj7I8vgeYG9SYqbeFGh0TM/KVtC6fg53nrWHl3VfZFvb5BiQFcY6Q=="
       },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Transitive",
@@ -221,11 +200,6 @@
         "resolved": "5.0.0",
         "contentHash": "VyPlqzH2wavqquTcYpkIIAQ6WdenuKoFN0BdYBbCWsclXacSOHNQn66Gt4z5NBqEYW0FAPm5rlvki9ZiCij5xQ=="
       },
-      "Microsoft.SourceLink.Common": {
-        "type": "Transitive",
-        "resolved": "1.1.1",
-        "contentHash": "WMcGpWKrmJmzrNeuaEb23bEMnbtR/vLmvZtkAP5qWu7vQsY59GqfRJd65sFpBszbd2k/bQ8cs8eWawQKAabkVg=="
-      },
       "Microsoft.Win32.Registry": {
         "type": "Transitive",
         "resolved": "5.0.0",
@@ -305,9 +279,6 @@
         "type": "Transitive",
         "resolved": "4.5.4",
         "contentHash": "zteT+G8xuGu6mS+mzDzYXbzS7rd3K6Fjb9RiZlYlJPam2/hU7JCBZBVEcywNuR+oZ1ncTvc/cq0faRr3P01OVg=="
-      },
-      "fastberttokenizer": {
-        "type": "Project"
       },
       "rustlibwrapper": {
         "type": "Project"

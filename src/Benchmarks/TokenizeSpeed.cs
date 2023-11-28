@@ -2,11 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
+using BenchmarkDotNet.Jobs;
 using FastBertTokenizer;
 
 namespace Benchmarks;
 
+[Config(typeof(Config))]
 [MemoryDiagnoser]
 /*
 [PerfCollectProfiler(performExtraBenchmarksRun: false)]
@@ -80,7 +83,7 @@ public class TokenizeSpeed
     }
 
     [Benchmark]
-    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) MultithreadedMemReuse()
+    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) MultithreadedMemReuseBatched()
     {
         var batchSize = 1000;
         var iids = new long[_maxSequenceLength * batchSize];
@@ -99,5 +102,31 @@ public class TokenizeSpeed
         }
 
         return (iids.AsMemory(), attm.AsMemory(), toktyp.AsMemory());
+    }
+
+    [Benchmark]
+    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) MultithreadedMemReuseAtOnce()
+    {
+        var corpMem = _corpus.AsMemory();
+        var batchSize = corpMem.Length;
+        var iids = new long[_maxSequenceLength * batchSize];
+        var attm = new long[_maxSequenceLength * batchSize];
+        var toktyp = new long[_maxSequenceLength * batchSize];
+        Array.Fill(toktyp, 0);
+
+        _tokenizer.Tokenize(corpMem, iids, attm, _maxSequenceLength);
+        return (iids.AsMemory(), attm.AsMemory(), toktyp.AsMemory());
+    }
+
+    private sealed class Config : ManualConfig
+    {
+        public Config()
+        {
+            var baseJob = Job.Default;
+            var localJob = baseJob.WithCustomBuildConfiguration("LocalBuild").WithId("LocalBuild");
+            var nugetJob = baseJob.WithNuGet("FastBertTokenizer", "0.4.8-beta").WithId("Nuget-0.4.8-beta");
+            AddJob(localJob);
+            AddJob(nugetJob);
+        }
     }
 }
