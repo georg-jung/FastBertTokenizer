@@ -79,6 +79,34 @@ public partial class BertTokenizer
     }
 
     /// <summary>
+    /// Create an <see cref="IAsyncEnumerable{T}"/> that can be used to enumerate batches of tokenized inputs. Provide a source enumerable that yields
+    /// inputs that should be tokenized, e.g. from a database. This source enumerable is just enumerated as needed. If an input is longer
+    /// than your model allows for a single input - specify this in <paramref name="tokensPerInput"/> - it will be split into multiple
+    /// model inputs. The <paramref name="batchSize"/> parameter specifies how many inputs your model can/should process batched. The
+    /// returned IAsyncEnumerable will yield batches of tokenized inputs according to this batch size. If one content item is larger
+    /// than one model input allows, it is split accross multiple inputs in a batch. If the content item is larger than one batch
+    /// allows (or if the batch is full but one content item didn't end at the end of the batch) it continues in the next batch.
+    /// The <paramref name="stride"/> parameter specifies how many tokens of overlap should be added when splitting a content item.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key you identify one content item in your backend storage with.</typeparam>
+    /// <param name="sourceEnumerable">A producer of contents to tokenize with their identifying keys.</param>
+    /// <param name="tokensPerInput">How many tokens the target models can process consequtively. E.g. 512 for many BERT models.</param>
+    /// <param name="batchSize">
+    /// How many consequitve inputs you want to process at once/batched in one call to your model. Choosing a small number might lead to
+    /// mediocre performance. Choosing a large number might recuire a lot of memory. You might want to experiment with this parameter
+    /// to find a value that leads to good performance for your use case.
+    /// </param>
+    /// <param name="stride">
+    /// How many tokens of overlap should be added if one content item is split accross multiple inputs.
+    /// E.g. if your content is 1234, your max input size is 2 and stride is 1, you get 12, 23, 34 as inputs.
+    /// </param>
+    /// <returns>An <see cref="IAsyncEnumerable{T}"/> which yields tokenized batches for processing by e.g. an AI model.</returns>
+    public IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsyncBatchEnumerator<TKey>(IAsyncEnumerable<(TKey Key, string Content)> sourceEnumerable, int tokensPerInput, int batchSize, int stride)
+    {
+        return new AsyncBatchEnumerator<TKey>(this, sourceEnumerable, tokensPerInput, batchSize, stride);
+    }
+
+    /// <summary>
     /// Encode the given input string to token ids per the loaded vocabulary. This overload allocated new memory to write its results to.
     /// Thus, it is less efficient than the overloads that take memory areas to write to. Consider using those if you need to encode multiple
     /// inputs successively.
@@ -104,6 +132,34 @@ public partial class BertTokenizer
             _inputIdReturnBuffer.AsMemory(0, inputIdCnt),
             _attentionMaskReturnBuffer.AsMemory(0, inputIdCnt),
             _tokenTypeIdsReturnBuffer.AsMemory(0, inputIdCnt));
+    }
+
+    internal TokenizedRange<TKey> TokenizeBatchElement<TKey>(
+        TKey inputKey,
+        string input,
+        int inputOffset,
+        ReadOnlySpan<long> strideInputIds,
+        Span<long> inputIds,
+        Span<long> attentionMask)
+    {
+        if (attentionMask.Length != inputIds.Length)
+        {
+            throw new ArgumentException($"{nameof(attentionMask)}.Length must be equal to {nameof(inputIds)}.Length.", nameof(attentionMask));
+        }
+
+        var used = 0;
+        if (!strideInputIds.IsEmpty)
+        {
+            inputIds[0] = _cls.Id;
+            strideInputIds.CopyTo(inputIds.Slice(1));
+            used = strideInputIds.Length + 1;
+        }
+
+        var (_, nonPaddedCnt) = Tokenize(input, inputOffset, inputIds.Slice(used), out var lastTokenizedWordStartIndex, inputIds.Length - used, includePartialLastWord: true, emitClsToken: used == 0);
+        attentionMask.Slice(0, used + nonPaddedCnt).Fill(1);
+        attentionMask.Slice(used + nonPaddedCnt).Fill(0);
+
+        return new TokenizedRange<TKey>(inputKey, inputOffset, lastTokenizedWordStartIndex);
     }
 
     private (int Length, int NonPadding) Tokenize(string input, int inputOffset, Span<long> inputIds, out int? lastTokenizedWordStartIndex, int? padTo = null, bool includePartialLastWord = true, bool emitClsToken = true)
