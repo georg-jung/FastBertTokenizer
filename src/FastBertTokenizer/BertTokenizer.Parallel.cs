@@ -87,7 +87,7 @@ public partial class BertTokenizer
             for (var i = param.StartInclusive; i < param.EndExclusive; i++)
             {
                 var startIdx = maximumTokens * i;
-                var (_, nonPad) = Tokenize(inputSpan[i], inputIds.Slice(startIdx, maximumTokens), maximumTokens);
+                var (_, nonPad) = Tokenize(inputSpan[i], 0, inputIds.Slice(startIdx, maximumTokens).Span, out var _, maximumTokens);
                 var span = attentionMask.Slice(startIdx, maximumTokens).Span;
                 span.Slice(0, nonPad).Fill(1);
                 span.Slice(nonPad, maximumTokens - nonPad).Fill(0);

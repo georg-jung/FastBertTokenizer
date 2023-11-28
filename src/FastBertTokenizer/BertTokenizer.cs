@@ -46,7 +46,7 @@ public partial class BertTokenizer
     /// Fill the given destination memory areas with padding tokens up to this length.
     /// </param>
     /// <returns>The number of token ids produced.</returns>
-    public int Tokenize(string input, Memory<long> inputIds, Span<long> attentionMask, Span<long> tokenTypeIds, int? padTo = null)
+    public int Tokenize(string input, Span<long> inputIds, Span<long> attentionMask, Span<long> tokenTypeIds, int? padTo = null)
     {
         var inputIdCnt = Tokenize(input, inputIds, attentionMask, padTo);
         tokenTypeIds.Slice(0, inputIdCnt).Fill(0);
@@ -54,10 +54,10 @@ public partial class BertTokenizer
         return inputIdCnt;
     }
 
-    /// <inheritdoc cref="Tokenize(string, Memory{long}, Span{long}, Span{long}, int?)"/>
-    public int Tokenize(string input, Memory<long> inputIds, Span<long> attentionMask, int? padTo = null)
+    /// <inheritdoc cref="Tokenize(string, Span{long}, Span{long}, Span{long}, int?)"/>
+    public int Tokenize(string input, Span<long> inputIds, Span<long> attentionMask, int? padTo = null)
     {
-        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, inputIds, padTo);
+        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, 0, inputIds, out var _, padTo);
         attentionMask.Slice(0, nonPaddedCnt).Fill(1);
         attentionMask.Slice(nonPaddedCnt, inputIdCnt - nonPaddedCnt).Fill(0);
         return inputIdCnt;
@@ -66,7 +66,7 @@ public partial class BertTokenizer
     /// <summary>
     /// Encode the given input string to token ids per the loaded vocabulary. This overload allocated new memory to write its results to.
     /// Thus, it is less efficient than the overloads that take memory areas to write to. Consider using those if you need to encode multiple
-    /// inputs successivly.
+    /// inputs successively.
     /// </summary>
     /// <param name="input">The input to encode.</param>
     /// <param name="maximumTokens">The maximum number of token ids to encode. Most bert models support inputs of up to 512 tokens.</param>
@@ -75,7 +75,7 @@ public partial class BertTokenizer
     public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) Tokenize(string input, int maximumTokens = 512, int? padTo = null)
     {
         var inputIds = new long[maximumTokens];
-        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, inputIds, padTo);
+        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, 0, inputIds, out var _, padTo);
         var attM = new long[inputIdCnt];
         var tokTypI = new long[inputIdCnt];
         Array.Fill(attM, 1, 0, nonPaddedCnt);
@@ -84,40 +84,50 @@ public partial class BertTokenizer
         return (inputIds.AsMemory(0, inputIdCnt), attM, tokTypI);
     }
 
-    private (int Length, int NonPadding) Tokenize(string input, Memory<long> inputIds, int? padTo = null)
+    private (int Length, int NonPadding) Tokenize(string input, int inputOffset, Span<long> inputIds, out int? lastTokenizedWordStartIndex, int? padTo = null, bool includePartialLastWord = true)
     {
         _ = _prefixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
 
-        var inputIdsSpan = inputIds.Span;
         var maximumTokens = inputIds.Length;
         var inputIdCnt = 1;
-        inputIdsSpan[0] = _cls.Id;
-        PreTokenizer.PreTokenize(input, OnWordToken, _lowercaseInput, _normalization);
+        inputIds[0] = _cls.Id;
 
-        bool OnWordToken(ReadOnlySpan<char> word)
+        lastTokenizedWordStartIndex = 0;
+        foreach (var pivot in new PreTokenizingEnumerator(input, _lowercaseInput, _normalization, inputOffset))
         {
-            var span = inputIds.Span;
-            var added = TokenizeSubword(word, span.Slice(inputIdCnt, span.Length - inputIdCnt));
+            lastTokenizedWordStartIndex = pivot.SegmentStartIndex;
+            var added = TokenizeSubword(pivot.Segment, inputIds.Slice(inputIdCnt, inputIds.Length - inputIdCnt));
             if (inputIdCnt + added + 1 > maximumTokens)
             {
                 // HuggingFace tokenizer does add partial words.
-                inputIdCnt = maximumTokens - 1; // leave one out for the final [SEP] token
-                return false;
+                if (includePartialLastWord)
+                {
+                    inputIdCnt = maximumTokens - 1; // leave one out for the final [SEP] token
+                    break;
+                }
+                else
+                {
+                    inputIds.Slice(inputIdCnt).Fill(_pad.Id);
+                    break;
+                }
             }
 
             inputIdCnt += added;
-            return inputIdCnt + 1 < maximumTokens;
+            if (inputIdCnt + 1 >= maximumTokens)
+            {
+                break;
+            }
         }
 
-        inputIds.Span[inputIdCnt] = _sep.Id;
+        inputIds[inputIdCnt] = _sep.Id;
         inputIdCnt++;
         var nonPaddedCnt = inputIdCnt;
 
-        if (padTo is int padLen && padLen > inputIdCnt)
+        if (padTo is int paddedLen && paddedLen > inputIdCnt)
         {
-            inputIdsSpan.Slice(inputIdCnt, padLen - inputIdCnt).Fill(_pad.Id);
-            inputIdCnt = padLen;
+            inputIds.Slice(inputIdCnt, paddedLen - inputIdCnt).Fill(_pad.Id);
+            inputIdCnt = paddedLen;
         }
 
         return (inputIdCnt, nonPaddedCnt);

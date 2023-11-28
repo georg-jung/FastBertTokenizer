@@ -7,11 +7,15 @@ using System.Text;
 
 namespace FastBertTokenizer;
 
-internal class PreTokenizer
+internal ref struct PreTokenizingEnumerator
 {
-    public delegate bool ReadOnlySpanFunc<T>(ReadOnlySpan<T> span);
+    private readonly bool _convertToLowercase;
+    private readonly ReadOnlySpan<char> _input;
+    private int start;
+    private int currentIndex;
+    private char[]? buffer = null;
 
-    public static void PreTokenize(string input, ReadOnlySpanFunc<char> processToken, bool convertToLowercase, NormalizationForm vocabNf)
+    public PreTokenizingEnumerator(string input, bool convertToLowercase, NormalizationForm vocabNf, int inputOffset = 0)
     {
         // The BertTokenizer itself will try normalizing the string if it can not find a matching token id in the vocabulary.
         // If the vocabulary uses FormD and our input is in FormC, we will not find a matching token id for the input as the composed
@@ -22,81 +26,113 @@ internal class PreTokenizer
         // The KC and KD variants need to be normalized here as well.
         if (vocabNf == NormalizationForm.FormD || input.IsNormalized(vocabNf))
         {
-            PreTokenize(input, processToken, convertToLowercase);
-            return;
+            _input = input.AsSpan(inputOffset);
+        }
+        else
+        {
+            _input = input.Normalize(vocabNf).AsSpan(inputOffset);
         }
 
-        PreTokenize(input.Normalize(vocabNf), processToken, convertToLowercase);
+        _convertToLowercase = convertToLowercase;
+        start = -1;
+        currentIndex = 0;
+        if (_convertToLowercase)
+        {
+            buffer = ArrayPool<char>.Shared.Rent(64);
+        }
     }
 
-    /// <summary>
-    /// Pre-tokenize text input. Turns sentences into words and punctuation, removes whitespace. Allocation free.
-    /// </summary>
-    /// <param name="input">Input to pre-tokenize.</param>
-    /// <param name="processToken">A function to process the next token. Pre-tokenization is stopped as soon as the function returns false.</param>
-    /// <param name="convertToLowercase">Convert word tokens to lowercase before further processing.</param>
-    private static void PreTokenize(ReadOnlySpan<char> input, ReadOnlySpanFunc<char> processToken, bool convertToLowercase)
+    public PreTokenizerResult Current { get; private set; }
+
+    public PreTokenizingEnumerator GetEnumerator() => this;
+
+    public bool MoveNext()
     {
-        var start = -1;
-        int i;
-
-        bool Flush(ReadOnlySpan<char> input)
+        while (currentIndex < _input.Length)
         {
-            if (start != -1)
-            {
-                var toProcess = input.Slice(start, i - start);
-                start = -1;
-                if (convertToLowercase)
-                {
-                    Span<char> span = toProcess.Length < 1000
-                        ? stackalloc char[toProcess.Length]
-                        : new char[toProcess.Length];
-                    toProcess.ToLowerInvariant(span);
+            var c = _input[currentIndex];
 
-                    // ToDo: Maybe we should also Unicode normalize here and not just in the OnUnknown case, because this might lead to different results.
-                    // related: https://github.com/dotnet/runtime/issues/87757
-                    return processToken(span);
-                }
-                else
-                {
-                    return processToken(toProcess);
-                }
-            }
-
-            return true;
-        }
-
-        for (i = 0; i < input.Length; i++)
-        {
-            var c = input[i];
-
-            // HuggingFace tokenizer would remove 0xFFFD (REPLACEMENT CHARACTER) and control chars here.
-            // That would require us to allocate memory, which we don't want to do.
-            // https://github.com/huggingface/transformers/blob/7db1ad63d9a9a8f705e13d68f90269df78a16df5/src/transformers/models/bert/tokenization_bert.py#L519
             if (char.IsWhiteSpace(c))
             {
-                if (!Flush(input))
+                if (Flush())
                 {
-                    return;
+                    currentIndex++;
+                    return true;
                 }
+
+                currentIndex++;
             }
             else if (IsPunctuation(c) || IsChineseCharacter(c))
             {
-                if (!Flush(input) || !processToken(input.Slice(i, 1)))
+                if (Flush())
                 {
-                    return;
+                    return true;
                 }
+
+                Current = new() { Segment = _input.Slice(currentIndex, 1), SegmentStartIndex = currentIndex };
+                currentIndex++;
+                return true;
             }
             else
             {
                 if (start == -1)
                 {
-                    start = i;
+                    start = currentIndex;
                 }
+
+                currentIndex++;
             }
         }
 
-        Flush(input);
+        return Flush();
+    }
+
+    public void Dispose()
+    {
+        if (buffer is not null)
+        {
+            ArrayPool<char>.Shared.Return(buffer);
+            buffer = null;
+        }
+    }
+
+    private bool Flush()
+    {
+        if (start != -1)
+        {
+            var toProcess = _input.Slice(start, currentIndex - start);
+            if (_convertToLowercase)
+            {
+                int lowerLen;
+                while ((lowerLen = toProcess.ToLowerInvariant(buffer)) == -1)
+                {
+                    ExpandBuffer();
+                }
+
+                Current = new() { Segment = buffer.AsSpan(0, lowerLen), SegmentStartIndex = start };
+            }
+            else
+            {
+                Current = new() { Segment = toProcess, SegmentStartIndex = start };
+            }
+
+            start = -1;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void ExpandBuffer()
+    {
+        if (buffer is null)
+        {
+            throw new ObjectDisposedException(nameof(PreTokenizingEnumerator));
+        }
+
+        var newLen = buffer!.Length * 2;
+        ArrayPool<char>.Shared.Return(buffer);
+        buffer = ArrayPool<char>.Shared.Rent(newLen);
     }
 
     // AggressiveInlining the methods below does seem to provide a performance boost in the 2-6% ballpark of the overall tokenizer.
@@ -158,4 +194,10 @@ internal class PreTokenizer
 
         return false;
     }
+}
+
+internal ref struct PreTokenizerResult
+{
+    public ReadOnlySpan<char> Segment;
+    public int SegmentStartIndex;
 }
