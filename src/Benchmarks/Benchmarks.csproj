@@ -14,6 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.133" />
     <PackageReference Include="BenchmarkDotNet" Version="0.13.10"/>
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.10" />
     <PackageReference Include="BERTTokenizers" Version="1.2.0" />
