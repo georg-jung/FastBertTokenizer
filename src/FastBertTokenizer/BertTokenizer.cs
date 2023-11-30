@@ -107,9 +107,8 @@ public partial class BertTokenizer
     }
 
     /// <summary>
-    /// Encode the given input string to token ids per the loaded vocabulary. This overload allocated new memory to write its results to.
-    /// Thus, it is less efficient than the overloads that take memory areas to write to. Consider using those if you need to encode multiple
-    /// inputs successively.
+    /// Encode the given input string to token ids per the loaded vocabulary. The returned <see cref="ReadOnlyMemory{T}" /> instances
+    /// are only valid until the next call to this method, as the internal buffers are reused for efficiency.
     /// </summary>
     /// <param name="input">The input to encode.</param>
     /// <param name="maximumTokens">The maximum number of token ids to encode. Most bert models support inputs of up to 512 tokens.</param>
