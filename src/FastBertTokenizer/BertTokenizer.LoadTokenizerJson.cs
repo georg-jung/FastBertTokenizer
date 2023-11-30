@@ -64,7 +64,7 @@ public partial class BertTokenizer
             throw new ArgumentException($"The confiuguration specifies version {tok.Version}, but currently only version 1.0 is supported.");
         }
 
-        if (tok.Model.Type != "WordPiece")
+        if (tok.Model.Type != "WordPiece" && tok.Model.Type is not null)
         {
             throw new ArgumentException($"The confiuguration specifies model type {tok.Model.Type}, but currently only WordPiece is supported.");
         }

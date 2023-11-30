@@ -71,7 +71,7 @@ internal record TokenizerJson
 
     internal record ModelSection
     {
-        public required string Type { get; init; }
+        public string? Type { get; init; }
 
         [JsonPropertyName("unk_token")]
         public required string UnkToken { get; init; }
