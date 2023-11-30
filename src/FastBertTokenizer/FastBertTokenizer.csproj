@@ -24,7 +24,14 @@ Fast and memory-efficient WordPiece tokenizer as it is used by BERT and others. 
 
   <ItemGroup>
     <None Include="../../logo.png" Pack="true" PackagePath="/icon.png" />
-    <None Include="../../README.md" Pack="true" PackagePath="/"/>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PolySharp">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>
