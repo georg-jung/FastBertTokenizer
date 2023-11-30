@@ -8,6 +8,7 @@ using Shouldly;
 
 namespace FastBertTokenizer.Tests
 {
+    [Collection("UsesRustLib")]
     public class CompareToHuggingfaceTokenizer : IClassFixture<BgeVocabFixture>
     {
         private readonly BgeVocabFixture _bgeVocab;
