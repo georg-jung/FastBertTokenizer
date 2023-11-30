@@ -9,6 +9,10 @@ namespace RustLibWrapper;
 
 public static partial class RustTokenizer
 {
+    private static long[]? _inputIds = null;
+    private static long[]? _attentionMask = null;
+    private static long[]? _tokenTypeIds = null;
+
     public static void LoadTokenizer(string path, int sequenceLength)
     {
         if (!NativeMethods.load_tokenizer(path, sequenceLength))
@@ -33,6 +37,13 @@ public static partial class RustTokenizer
 
     public static (ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds) TokenizeAndGetIds(string input, int maxTokenIds = 512)
     {
+        if (_inputIds == null || _inputIds.Length < maxTokenIds || _attentionMask is null)
+        {
+            _inputIds = new long[maxTokenIds];
+            _attentionMask = new long[maxTokenIds];
+            _tokenTypeIds = new long[maxTokenIds];
+        }
+
         var ids = ArrayPool<uint>.Shared.Rent(maxTokenIds);
         var attentionMask = ArrayPool<uint>.Shared.Rent(maxTokenIds);
 
@@ -40,10 +51,16 @@ public static partial class RustTokenizer
         {
             TokenizeAndGetIds(input, ids.AsSpan().Slice(0, maxTokenIds), attentionMask.AsSpan().Slice(0, maxTokenIds));
 
+            for (var i = 0; i < maxTokenIds; i++)
+            {
+                _inputIds[i] = ids[i];
+                _attentionMask[i] = attentionMask[i];
+            }
+
             return (
-                new Memory<long>(ids.Select(x => (long)x).ToArray(), 0, maxTokenIds),
-                new Memory<long>(attentionMask.Select(x => (long)x).ToArray(), 0, maxTokenIds),
-                new Memory<long>(new long[maxTokenIds]));
+                _inputIds.AsMemory().Slice(0, maxTokenIds),
+                _attentionMask.AsMemory().Slice(0, maxTokenIds),
+                _tokenTypeIds.AsMemory().Slice(0, maxTokenIds));
         }
         finally
         {
