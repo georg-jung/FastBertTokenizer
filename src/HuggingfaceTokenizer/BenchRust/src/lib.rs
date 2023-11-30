@@ -41,7 +41,7 @@ pub fn load_tokenizer(tokenizer_json_path: &str, pad_to: usize) -> tokenizers::t
 
 #[inline]
 pub fn load() -> (Tokenizer, Vec<String>) {
-    let tokenizer_path = "../../../data/baai-bge-small-en-tokenizer.json";
+    let tokenizer_path = "../../../data/baai-bge-small-en/tokenizer.json";
     let wikidata_path = "../../../data/wiki-simple.json.br";
 
     let articles = load_wikidata_from_brotli_json(wikidata_path).unwrap();

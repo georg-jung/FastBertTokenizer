@@ -7,7 +7,7 @@ public class BgeVocabFixture
 {
     public BgeVocabFixture()
     {
-        using var sr = new StreamReader("data/baai-bge-small-en-vocab.txt");
+        using var sr = new StreamReader("data/baai-bge-small-en/vocab.txt");
         UnderTest.LoadVocabulary(sr, true);
     }
 

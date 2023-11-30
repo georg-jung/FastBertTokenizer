@@ -21,7 +21,7 @@ public class OtherLibs
     private List<string> _nmZivkovicCorpus = null!;
 
     public OtherLibs()
-        : this("data/wiki-simple.json.br", "data/baai-bge-small-en-vocab.txt", "data/baai-bge-small-en-tokenizer.json", 512)
+        : this("data/wiki-simple.json.br", "data/baai-bge-small-en/vocab.txt", "data/baai-bge-small-en/tokenizer.json", 512)
     {
     }
 

@@ -26,7 +26,7 @@ public class TokenizeSpeed
     private string[] _corpus = null!;
 
     public TokenizeSpeed()
-        : this("data/wiki-simple.json.br", "data/baai-bge-small-en-vocab.txt", 512)
+        : this("data/wiki-simple.json.br", "data/baai-bge-small-en/vocab.txt", 512)
     {
     }
 

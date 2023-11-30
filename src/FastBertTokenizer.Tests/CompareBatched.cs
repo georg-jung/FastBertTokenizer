@@ -19,7 +19,7 @@ public class CompareBatched : IClassFixture<BgeVocabFixture>
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
     public async Task CompareSimpleWikipediaCorpusAsIs512(Dictionary<int, string> articles)
     {
-        RustTokenizer.LoadTokenizer("data/baai-bge-small-en-tokenizer.json", 512);
+        RustTokenizer.LoadTokenizer("data/baai-bge-small-en/tokenizer.json", 512);
         await CompareSimpleWikipediaCorpusAsIsImpl(articles, 512, 100);
     }
 
@@ -27,7 +27,7 @@ public class CompareBatched : IClassFixture<BgeVocabFixture>
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
     public async Task CompareSimpleWikipediaCorpusAsIs333(Dictionary<int, string> articles)
     {
-        RustTokenizer.LoadTokenizer("data/baai-bge-small-en-tokenizer.json", 333);
+        RustTokenizer.LoadTokenizer("data/baai-bge-small-en/tokenizer.json", 333);
         await CompareSimpleWikipediaCorpusAsIsImpl(articles, 333, 100);
     }
 
@@ -35,7 +35,7 @@ public class CompareBatched : IClassFixture<BgeVocabFixture>
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
     public async Task CompareSimpleWikipediaCorpusAsIs27(Dictionary<int, string> articles)
     {
-        RustTokenizer.LoadTokenizer("data/baai-bge-small-en-tokenizer.json", 27);
+        RustTokenizer.LoadTokenizer("data/baai-bge-small-en/tokenizer.json", 27);
         await CompareSimpleWikipediaCorpusAsIsImpl(articles, 27, 100);
     }
 
@@ -43,7 +43,7 @@ public class CompareBatched : IClassFixture<BgeVocabFixture>
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
     public async Task CompareSimpleWikipediaCorpusAsIs2048(Dictionary<int, string> articles)
     {
-        RustTokenizer.LoadTokenizer("data/baai-bge-small-en-tokenizer.json", 2048);
+        RustTokenizer.LoadTokenizer("data/baai-bge-small-en/tokenizer.json", 2048);
         await CompareSimpleWikipediaCorpusAsIsImpl(articles, 2048, 100);
     }
 
