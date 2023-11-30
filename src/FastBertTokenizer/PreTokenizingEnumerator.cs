@@ -25,7 +25,7 @@ internal ref struct PreTokenizingEnumerator
         // If the vocabulary uses FormC and our input is in FormD, we need to normalize here, as we might be able to encode the
         // FormD variant while there might be a more specific FormC vocabulary match which we couldn't find due to wrong normalization.
         // The KC and KD variants need to be normalized here as well.
-        if (vocabNf == NormalizationForm.FormD || input.IsNormalized(vocabNf))
+        if (input.IsNormalized(vocabNf))
         {
             _input = input.AsSpan(inputOffset);
         }
