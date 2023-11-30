@@ -97,23 +97,44 @@ public class CompareBatched : IClassFixture<BgeVocabFixture>
                 {
                     try
                     {
-                        // FastBertTokenizer searches for partial words first, Huggingface removes diacritics first.
-                        // The last token is always [SEP].
-                        // Thus, we accept if the last token is different.
-                        var firstSuffixNullIdx = currentInputIds.Length - 1;
-                        while (currentInputIds.Span[firstSuffixNullIdx--] == 0) // assume [SEP] == 0 here
-                        {
-                            // count how many [SEP] our result has at it's end
-                        }
+                        var needsToMatchUpToIdx = currentInputIds.Length - 1;
 
-                        // there might have been no [SEP] at the end but some real failure
-                        if (currentInputIds.Span[firstSuffixNullIdx] != 0)
+                        // assume [PAD] == 0 here
+                        if (currentInputIds.Span[^1] == 0)
+                        {
+                            // Our result ends with padding. That might be because we don't tokenize partial words, while
+                            // Hugging Face does.
+                            while (currentInputIds.Span[--needsToMatchUpToIdx] == 0)
+                            {
+                                // Skip padding at the end if there is any. There might be because we didn't tokenize
+                                // partial words.
+                            }
+
+                            // But then there neds to be a [SEP], otherwise there is some fault.
+                            if (currentInputIds.Span[needsToMatchUpToIdx] != 102)
+                            {
+                                throw new Exception($"Error comparing tokenization results for {tokRg.Key}", exFirst);
+                            }
+
+                            // It was a [SEP], so we skip it.
+                            needsToMatchUpToIdx--;
+                        }
+                        else if (currentInputIds.Span[^1] == 102) // assume [SEP] == 102 here
+                        {
+                            // Our result ends with [SEP]. As FastBertTokenizer searches for partial words first,
+                            // while Huggingface removes diacritics first, the last token before [SEP] might be
+                            // different. We accept that.
+                            needsToMatchUpToIdx--; // skip [SEP]
+                            needsToMatchUpToIdx--; // skip the token before [SEP]
+                        }
+                        else
                         {
                             throw new Exception($"Error comparing tokenization results for {tokRg.Key}", exFirst);
                         }
 
-                        currentInputIds.Slice(0, firstSuffixNullIdx).ShouldBe(huggF.InputIds.Slice(0, firstSuffixNullIdx));
-                        batch.AttentionMask.Slice(i * maxInputTokens, firstSuffixNullIdx).ShouldBe(huggF.AttentionMask.Slice(0, firstSuffixNullIdx));
+                        var needsToMatchUpToLen = needsToMatchUpToIdx + 1;
+                        currentInputIds.Slice(0, needsToMatchUpToLen).ShouldBe(huggF.InputIds.Slice(0, needsToMatchUpToLen));
+                        batch.AttentionMask.Slice(i * maxInputTokens, needsToMatchUpToLen).ShouldBe(huggF.AttentionMask.Slice(0, needsToMatchUpToLen));
                     }
                     catch (Exception ex)
                     {
