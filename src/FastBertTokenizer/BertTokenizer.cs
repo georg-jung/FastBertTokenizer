@@ -184,6 +184,20 @@ public partial class BertTokenizer
             // subword was/needs to be cut off because it was to long
             if (inputIdCnt + added + 1 > maximumTokens)
             {
+                if (inputIdCnt == 0 || (inputIdCnt == 1 && emitClsToken))
+                {
+                    // The word didn't fit even though this is the first word we're trying to tokenize.
+                    // We'll need to emit [UNK] instead of the word because this would otherwise lead to
+                    // an endless loop if we try to tokenize the "remainder" of this input. This is does
+                    // make sense too because this is probably some strange sequence of characters or we
+                    // chose a very small maximumTokens value.
+                    // This is quite an edge case because it just happens if one single word tokenizes to
+                    // more tokens then maximumTokens. This is very unlikely to happen in practice.
+                    inputIds[inputIdCnt] = _unk.Id;
+                    inputIdCnt++;
+                    continue;
+                }
+
                 moreRemainingInput = true;
 
                 // HuggingFace tokenizer does add partial words.
