@@ -7,48 +7,80 @@ using Shouldly;
 namespace FastBertTokenizer.Tests;
 
 [Collection("UsesRustLib")]
-public class CompareBatched : IClassFixture<BgeVocabFixture>
+public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
 {
-    private readonly BgeVocabFixture _bgeVocab;
+    private BertTokenizer _baaiBgeTok = new();
+    private BertTokenizer _bertUncasedTok = new();
+    private BertTokenizer _bertMultilingualTok = new();
+    private BertTokenizer _bertChineseTok = new();
 
-    public CompareBatched(BgeVocabFixture bgeVocab)
+    public async Task InitializeAsync()
     {
-        _bgeVocab = bgeVocab;
+        await _baaiBgeTok.LoadVocabularyAsync("data/baai-bge-small-en/vocab.txt", true);
+        await _bertUncasedTok.LoadVocabularyAsync("data/bert-base-uncased/vocab.txt", true);
+        await _bertMultilingualTok.LoadVocabularyAsync("data/bert-base-multilingual-cased/vocab.txt", false);
+        await _bertChineseTok.LoadVocabularyAsync("data/bert-base-chinese/vocab.txt", true);
+    }
+
+    public Task DisposeAsync() => Task.CompletedTask;
+
+    [Theory]
+    [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
+    public async Task CompareSimpleWikipediaCorpusAsIsBertUncased512(Dictionary<int, string> articles)
+    {
+        RustTokenizer.LoadTokenizer("data/bert-base-uncased/tokenizer.json", 512);
+        await CompareSimpleWikipediaCorpusAsIsImpl(_bertUncasedTok, articles, 512, 100);
     }
 
     [Theory]
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
-    public async Task CompareSimpleWikipediaCorpusAsIs512(Dictionary<int, string> articles)
+    public async Task CompareSimpleWikipediaCorpusAsIsBertMultilingualBge512(Dictionary<int, string> articles)
+    {
+        RustTokenizer.LoadTokenizer("data/bert-base-multilingual-cased/tokenizer.json", 512);
+        await CompareSimpleWikipediaCorpusAsIsImpl(_bertMultilingualTok, articles, 512, 100);
+    }
+
+    [Theory]
+    [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
+    public async Task CompareSimpleWikipediaCorpusAsIsBertChineseBge512(Dictionary<int, string> articles)
+    {
+        RustTokenizer.LoadTokenizer("data/bert-base-chinese/tokenizer.json", 512);
+        await CompareSimpleWikipediaCorpusAsIsImpl(_bertChineseTok, articles, 512, 100);
+    }
+
+    [Theory]
+    [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
+    public async Task CompareSimpleWikipediaCorpusAsIsBaaiBge512(Dictionary<int, string> articles)
     {
         RustTokenizer.LoadTokenizer("data/baai-bge-small-en/tokenizer.json", 512);
-        await CompareSimpleWikipediaCorpusAsIsImpl(articles, 512, 100);
+        await CompareSimpleWikipediaCorpusAsIsImpl(_baaiBgeTok, articles, 512, 100);
     }
 
     [Theory]
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
-    public async Task CompareSimpleWikipediaCorpusAsIs333(Dictionary<int, string> articles)
+    public async Task CompareSimpleWikipediaCorpusAsIsBaaiBge333(Dictionary<int, string> articles)
     {
         RustTokenizer.LoadTokenizer("data/baai-bge-small-en/tokenizer.json", 333);
-        await CompareSimpleWikipediaCorpusAsIsImpl(articles, 333, 100);
+        await CompareSimpleWikipediaCorpusAsIsImpl(_baaiBgeTok, articles, 333, 100);
     }
 
     [Theory]
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
-    public async Task CompareSimpleWikipediaCorpusAsIs27(Dictionary<int, string> articles)
+    public async Task CompareSimpleWikipediaCorpusAsIsBaaiBge27(Dictionary<int, string> articles)
     {
         RustTokenizer.LoadTokenizer("data/baai-bge-small-en/tokenizer.json", 27);
-        await CompareSimpleWikipediaCorpusAsIsImpl(articles, 27, 100);
+        await CompareSimpleWikipediaCorpusAsIsImpl(_baaiBgeTok, articles, 27, 100);
     }
 
     [Theory]
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
-    public async Task CompareSimpleWikipediaCorpusAsIs2048(Dictionary<int, string> articles)
+    public async Task CompareSimpleWikipediaCorpusAsIsBaaiBge2048(Dictionary<int, string> articles)
     {
         RustTokenizer.LoadTokenizer("data/baai-bge-small-en/tokenizer.json", 2048);
-        await CompareSimpleWikipediaCorpusAsIsImpl(articles, 2048, 100);
+        await CompareSimpleWikipediaCorpusAsIsImpl(_baaiBgeTok, articles, 2048, 100);
     }
 
-    private async Task CompareSimpleWikipediaCorpusAsIsImpl(Dictionary<int, string> articles, int maxInputTokens, int batchSize)
+    private async Task CompareSimpleWikipediaCorpusAsIsImpl(BertTokenizer uut, Dictionary<int, string> articles, int maxInputTokens, int batchSize)
     {
         async IAsyncEnumerable<(int, string)> EnumerateContent()
         {
@@ -59,9 +91,8 @@ public class CompareBatched : IClassFixture<BgeVocabFixture>
             }
         }
 
-        var tok = _bgeVocab.UnderTest;
         var allNulls = new long[maxInputTokens];
-        await foreach (var batch in tok.CreateAsyncBatchEnumerator(EnumerateContent(), maxInputTokens, batchSize, 0))
+        await foreach (var batch in uut.CreateAsyncBatchEnumerator(EnumerateContent(), maxInputTokens, batchSize, 0))
         {
             for (var i = 0; i < batch.InputIds.Length / maxInputTokens; i++)
             {

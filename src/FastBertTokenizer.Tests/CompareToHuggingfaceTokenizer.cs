@@ -1,7 +1,6 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using RustLibWrapper;
 using Shouldly;
@@ -9,57 +8,99 @@ using Shouldly;
 namespace FastBertTokenizer.Tests
 {
     [Collection("UsesRustLib")]
-    public class CompareToHuggingfaceTokenizer : IClassFixture<BgeVocabFixture>
+    public class CompareToHuggingfaceTokenizer : IAsyncLifetime
     {
-        private readonly BgeVocabFixture _bgeVocab;
+        private readonly BertTokenizer _uut = new();
 
-        public CompareToHuggingfaceTokenizer(BgeVocabFixture bgeVocab)
+        public async Task InitializeAsync()
         {
-            _bgeVocab = bgeVocab;
-            RustTokenizer.LoadTokenizer("data/baai-bge-small-en/tokenizer.json", 512);
+            await _uut.LoadTokenizerJsonAsync("data/bert-base-uncased/tokenizer.json");
+            RustTokenizer.LoadTokenizer("data/bert-base-uncased/tokenizer.json", 512);
+        }
+
+        public Task DisposeAsync() => Task.CompletedTask;
+
+        [Theory]
+        [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
+        public void CompareSimpleWikipediaCorpusAsIs(Dictionary<int, string> articles)
+        {
+            foreach (var (key, value) in articles)
+            {
+                CompareImpl(key, value);
+            }
         }
 
         [SkippableTheory]
-        [MemberData(nameof(WikipediaSimpleData.GetArticles), MemberType = typeof(WikipediaSimpleData))]
-        public void CompareSimpleWikipediaCorpusAsIs(int id, string content)
+        [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
+        public void CompareSimpleWikipediaCorpusFormD(Dictionary<int, string> articles)
         {
-            CompareImpl(id, content);
+            var dicD = Normalize(articles, System.Text.NormalizationForm.FormD);
+
+            foreach (var (key, value) in dicD)
+            {
+                CompareImpl(key, value);
+            }
         }
 
         [SkippableTheory]
-        [MemberData(nameof(WikipediaSimpleData.GetArticles), MemberType = typeof(WikipediaSimpleData))]
-        public void CompareSimpleWikipediaCorpusFormD(int id, string content)
+        [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
+        public void CompareSimpleWikipediaCorpusFormC(Dictionary<int, string> articles)
         {
-            CompareImpl(id, content.Normalize(System.Text.NormalizationForm.FormD));
+            var dicC = Normalize(articles, System.Text.NormalizationForm.FormC);
+
+            foreach (var (key, value) in dicC)
+            {
+                CompareImpl(key, value);
+            }
         }
 
         [SkippableTheory]
-        [MemberData(nameof(WikipediaSimpleData.GetArticles), MemberType = typeof(WikipediaSimpleData))]
-        public void CompareSimpleWikipediaCorpusFormC(int id, string content)
+        [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
+        public void CompareSimpleWikipediaCorpusFormKC(Dictionary<int, string> articles)
         {
-            CompareImpl(id, content.Normalize(System.Text.NormalizationForm.FormC));
+            var dicKc = new Dictionary<int, string>(articles.Count);
+            foreach (var (key, value) in articles)
+            {
+                if (key == 11133 || key == 44470 || key == 45931 || key == 13451)
+                {
+                    // In NFKC there are some more differences regarding [UNK] tokens that become apparent in these 4 articles.
+                    continue;
+                }
+
+                dicKc[key] = value.Normalize(System.Text.NormalizationForm.FormKC);
+            }
+
+            foreach (var (key, value) in dicKc)
+            {
+                CompareImpl(key, value);
+            }
         }
 
-        [SkippableTheory]
-        [MemberData(nameof(WikipediaSimpleData.GetArticles), MemberType = typeof(WikipediaSimpleData))]
-        public void CompareSimpleWikipediaCorpusFormKC(int id, string content)
+        private Dictionary<int, string> Normalize(Dictionary<int, string> articles, System.Text.NormalizationForm form)
         {
-            Skip.If(id == 11133 || id == 44470 || id == 45931 || id == 13451, "In NFKC there are some more differences regarding [UNK] tokens that become apparent in these 4 articles.");
-            CompareImpl(id, content.Normalize(System.Text.NormalizationForm.FormKC));
+            var dic = new Dictionary<int, string>(articles.Count);
+            foreach (var (key, value) in articles)
+            {
+                dic[key] = value.Normalize(form);
+            }
+
+            return dic;
         }
 
-        [SuppressMessage("StyleCop.CSharp.ReadabilityRules", "SA1118:ParameterMustNotSpanMultipleLines", Justification = "Reviewed.")]
         private void CompareImpl(int id, string content)
         {
-            Skip.If(id == 6309, "6309 \"Letter\" contains assamese characters and huggingface tokenizer skips one [UNK] were I think one should be.");
-            Skip.If(id == 30153, "30153 \"Avignon\" has Rhône as the last word before hitting the 512 token id limit; we try prefixes first, "
-                + "huggingface removes diacritics first. Thus, we end with token id for r while huggingface (correctly) emits rhone. Quite in "
-                + "edge case that is just ever relevant for the last word, after which the tokenized version is cut off.");
-            Skip.If(id == 60246, "60246 \"Shahada\" has many tokens in exotic scripts as 6309 letter. Huggingface emits one [UNK] more than we do here too.");
+            if (id == 6309 || id == 30153 || id == 60246)
+            {
+                // 6309 "Letter" contains assamese characters and huggingface tokenizer skips one [UNK] were I think one should be.
+                // 30153 "Avignon" has Rhône as the last word before hitting the 512 token id limit; we try prefixes first,
+                //      huggingface removes diacritics first. Thus, we end with token id for r while huggingface (correctly) emits rhone.
+                //      An edge case that is just ever relevant for the last word, after which the tokenized version is cut off.
+                // 60246 "Shahada" has many tokens in exotic scripts, as 6309 "Letter". Huggingface emits one [UNK] more than we do here too.
+                return;
+            }
 
-            var tok = _bgeVocab.UnderTest;
             var huggF = RustTokenizer.TokenizeAndGetIds(content, 512);
-            var ours = tok.Tokenize(content, 512, 512);
+            var ours = _uut.Tokenize(content, 512, 512);
             try
             {
                 ours.InputIds.ShouldBe(huggF.InputIds);
@@ -69,9 +110,9 @@ namespace FastBertTokenizer.Tests
             catch (Exception ex)
             {
                 File.WriteAllText($"unequal_tokenization_pair_huggf_{id}.json", JsonSerializer.Serialize(
-                    new { dec = tok.Decode(huggF.InputIds.Span), input_ids = huggF.InputIds.ToArray(), attm = huggF.AttentionMask.ToArray(), toktyp = huggF.TokenTypeIds.ToArray() }));
+                    new { dec = _uut.Decode(huggF.InputIds.Span), input_ids = huggF.InputIds.ToArray(), attm = huggF.AttentionMask.ToArray(), toktyp = huggF.TokenTypeIds.ToArray() }));
                 File.WriteAllText($"unequal_tokenization_pair_ours_{id}.json", JsonSerializer.Serialize(
-                    new { dec = tok.Decode(ours.InputIds.Span), input_ids = ours.InputIds.ToArray(), attm = ours.AttentionMask.ToArray(), toktyp = ours.TokenTypeIds.ToArray() }));
+                    new { dec = _uut.Decode(ours.InputIds.Span), input_ids = ours.InputIds.ToArray(), attm = ours.AttentionMask.ToArray(), toktyp = ours.TokenTypeIds.ToArray() }));
                 throw new ShouldAssertException($"Assertion failed for article {id}:\n{ex.Message}", ex);
             }
         }
