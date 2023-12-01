@@ -77,7 +77,7 @@ public partial class BertTokenizer
             {
                 if (line.StartsWith("##", StringComparison.Ordinal))
                 {
-                    suffixes[line[2..].Normalize(normalization)] = i;
+                    suffixes[line[2..]] = i;
                 }
                 else if (line.Equals(unknownToken, StringComparison.Ordinal))
                 {
@@ -97,7 +97,7 @@ public partial class BertTokenizer
                 }
                 else
                 {
-                    prefixes[line.Normalize(normalization)] = i;
+                    prefixes[line] = i;
                 }
             }
 

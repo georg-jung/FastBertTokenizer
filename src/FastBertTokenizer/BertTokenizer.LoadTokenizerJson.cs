@@ -115,7 +115,7 @@ public partial class BertTokenizer
             {
                 if (line.StartsWith(suffixPrefix, StringComparison.Ordinal))
                 {
-                    suffixes[line[suffixPrefix.Length..].Normalize(normalization)] = tokenId;
+                    suffixes[line[suffixPrefix.Length..]] = tokenId;
                 }
                 else if (line.Equals(unkToken, StringComparison.Ordinal))
                 {
@@ -135,7 +135,7 @@ public partial class BertTokenizer
                 }
                 else
                 {
-                    prefixes[line.Normalize(normalization)] = tokenId;
+                    prefixes[line] = tokenId;
                 }
             }
         }
