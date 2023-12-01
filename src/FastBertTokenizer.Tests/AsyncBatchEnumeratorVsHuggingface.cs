@@ -19,7 +19,7 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
         await _baaiBgeTok.LoadVocabularyAsync("data/baai-bge-small-en/vocab.txt", true);
         await _bertUncasedTok.LoadVocabularyAsync("data/bert-base-uncased/vocab.txt", true);
         await _bertMultilingualTok.LoadVocabularyAsync("data/bert-base-multilingual-cased/vocab.txt", false);
-        await _bertChineseTok.LoadVocabularyAsync("data/bert-base-chinese/vocab.txt", true);
+        await _bertChineseTok.LoadVocabularyAsync("data/bert-base-chinese/vocab.txt", false);
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
