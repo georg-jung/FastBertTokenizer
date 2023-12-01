@@ -1,9 +1,11 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
+
 namespace FastBertTokenizer;
 
-internal class AsyncBatchEnumerator<TKey> : IAsyncEnumerable<TokenizedBatch<TKey>>, IAsyncEnumerator<TokenizedBatch<TKey>>
+internal class AsyncBatchEnumerator<TKey>
 {
     private readonly BertTokenizer _tokenizer;
     private readonly int _tokensPerInput;
@@ -12,14 +14,25 @@ internal class AsyncBatchEnumerator<TKey> : IAsyncEnumerable<TokenizedBatch<TKey
     private readonly long[] _inputIds;
     private readonly long[] _attentionMask;
     private readonly TokenizedRange<TKey>?[] _outputCorrelation;
-    private readonly IAsyncEnumerator<(TKey Key, string Content)> _sourceEnumerator;
+    private readonly IAsyncEnumerator<(TKey Key, string Content)>? _asyncSourceEnumerator;
+    private readonly IEnumerator<(TKey Key, string Content)>? _sourceEnumerator;
     private (TKey Key, string Conent, int Offset)? _pivot;
-    private bool _gotEnumerator = false;
 
-    internal AsyncBatchEnumerator(BertTokenizer tokenizer, IAsyncEnumerable<(TKey Key, string Content)> sourceEnumerable, int tokensPerInput, int batchSize, int stride)
+    private AsyncBatchEnumerator(BertTokenizer tokenizer, IAsyncEnumerable<(TKey Key, string Content)> asyncSourceEnumerable, int tokensPerInput, int batchSize, int stride)
+        : this(tokenizer, tokensPerInput, batchSize, stride)
+    {
+        _asyncSourceEnumerator = asyncSourceEnumerable.GetAsyncEnumerator();
+    }
+
+    private AsyncBatchEnumerator(BertTokenizer tokenizer, IEnumerable<(TKey Key, string Content)> sourceEnumerable, int tokensPerInput, int batchSize, int stride)
+        : this(tokenizer, tokensPerInput, batchSize, stride)
+    {
+        _sourceEnumerator = sourceEnumerable.GetEnumerator();
+    }
+
+    private AsyncBatchEnumerator(BertTokenizer tokenizer, int tokensPerInput, int batchSize, int stride)
     {
         _tokenizer = tokenizer;
-        _sourceEnumerator = sourceEnumerable.GetAsyncEnumerator();
         _tokensPerInput = tokensPerInput;
         _batchSize = batchSize;
         _stride = stride;
@@ -29,17 +42,18 @@ internal class AsyncBatchEnumerator<TKey> : IAsyncEnumerable<TokenizedBatch<TKey
         Current = new() { AttentionMask = _attentionMask, InputIds = _inputIds, OutputCorrelation = _outputCorrelation };
     }
 
-    public TokenizedBatch<TKey> Current { get; }
+    private TokenizedBatch<TKey> Current { get; }
 
-    public IAsyncEnumerator<TokenizedBatch<TKey>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsync(BertTokenizer tokenizer, IAsyncEnumerable<(TKey Key, string Content)> asyncSourceEnumerable, int tokensPerInput, int batchSize, int stride)
     {
-        if (_gotEnumerator)
-        {
-            throw new InvalidOperationException("Multiple enumeration of this IAsyncEnumerable is not supported.");
-        }
+        var impl = new AsyncBatchEnumerator<TKey>(tokenizer, asyncSourceEnumerable, tokensPerInput, batchSize, stride);
+        return new AsyncEnumerable(impl);
+    }
 
-        _gotEnumerator = true;
-        return this;
+    public static IEnumerable<TokenizedBatch<TKey>> CreateSync(BertTokenizer tokenizer, IEnumerable<(TKey Key, string Content)> asyncSourceEnumerable, int tokensPerInput, int batchSize, int stride)
+    {
+        var impl = new AsyncBatchEnumerator<TKey>(tokenizer, asyncSourceEnumerable, tokensPerInput, batchSize, stride);
+        return new SyncEnumerable(impl);
     }
 
     public async ValueTask<bool> MoveNextAsync()
@@ -50,12 +64,13 @@ internal class AsyncBatchEnumerator<TKey> : IAsyncEnumerable<TokenizedBatch<TKey
         {
             if (!_pivot.HasValue)
             {
-                if (!await _sourceEnumerator.MoveNextAsync())
+                if (!(_sourceEnumerator?.MoveNext() ?? await _asyncSourceEnumerator!.MoveNextAsync()))
                 {
                     break;
                 }
 
-                _pivot = (_sourceEnumerator.Current.Key, _sourceEnumerator.Current.Content, 0);
+                var current = _sourceEnumerator?.Current ?? _asyncSourceEnumerator!.Current;
+                _pivot = (current.Key, current.Content, 0);
             }
 
             var p = _pivot.Value;
@@ -91,7 +106,53 @@ internal class AsyncBatchEnumerator<TKey> : IAsyncEnumerable<TokenizedBatch<TKey
         return i != 0;
     }
 
-    public ValueTask DisposeAsync() => _sourceEnumerator.DisposeAsync();
+    public ValueTask DisposeAsync() => _asyncSourceEnumerator?.DisposeAsync() ?? ValueTask.CompletedTask;
+
+    private sealed class AsyncEnumerable(AsyncBatchEnumerator<TKey> parent) :
+        IAsyncEnumerator<TokenizedBatch<TKey>>,
+        IAsyncEnumerable<TokenizedBatch<TKey>>
+    {
+        public TokenizedBatch<TKey> Current => parent.Current;
+
+        public ValueTask DisposeAsync() => parent.DisposeAsync();
+
+        public IAsyncEnumerator<TokenizedBatch<TKey>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+            => this;
+
+        public ValueTask<bool> MoveNextAsync() => parent.MoveNextAsync();
+    }
+
+    private sealed class SyncEnumerable(AsyncBatchEnumerator<TKey> parent) :
+        IEnumerator<TokenizedBatch<TKey>>,
+        IEnumerable<TokenizedBatch<TKey>>
+    {
+        public TokenizedBatch<TKey> Current => parent.Current;
+
+        object IEnumerator.Current => parent.Current;
+
+        public void Dispose()
+        {
+        }
+
+        public IEnumerator<TokenizedBatch<TKey>> GetEnumerator() => this;
+
+        IEnumerator IEnumerable.GetEnumerator() => this;
+
+        public bool MoveNext()
+        {
+            var vt = parent.MoveNextAsync();
+            if (!vt.IsCompletedSuccessfully)
+            {
+                throw new NotImplementedException();
+            }
+            else
+            {
+                return vt.Result;
+            }
+        }
+
+        public void Reset() => throw new InvalidOperationException("Multiple enumeration is not supported.");
+    }
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Reviewed.")]

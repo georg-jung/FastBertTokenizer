@@ -79,7 +79,7 @@ public partial class BertTokenizer
     }
 
     /// <summary>
-    /// Create an <see cref="IAsyncEnumerable{T}"/> that can be used to enumerate batches of tokenized inputs. Provide a source enumerable that yields
+    /// Create an enumerable that can be used to enumerate batches of tokenized inputs. Provide a source enumerable that yields
     /// inputs that should be tokenized, e.g. from a database. This source enumerable is just enumerated as needed. If an input is longer
     /// than your model allows for a single input - specify this in <paramref name="tokensPerInput"/> - it will be split into multiple
     /// model inputs. The <paramref name="batchSize"/> parameter specifies how many inputs your model can/should process batched. The
@@ -103,7 +103,14 @@ public partial class BertTokenizer
     /// <returns>An <see cref="IAsyncEnumerable{T}"/> which yields tokenized batches for processing by e.g. an AI model.</returns>
     public IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsyncBatchEnumerator<TKey>(IAsyncEnumerable<(TKey Key, string Content)> sourceEnumerable, int tokensPerInput, int batchSize, int stride)
     {
-        return new AsyncBatchEnumerator<TKey>(this, sourceEnumerable, tokensPerInput, batchSize, stride);
+        return AsyncBatchEnumerator<TKey>.CreateAsync(this, sourceEnumerable, tokensPerInput, batchSize, stride);
+    }
+
+    /// <returns>An <see cref="IEnumerable{T}"/> which yields tokenized batches for processing by e.g. an AI model.</returns>
+    /// <inheritdoc cref="CreateAsyncBatchEnumerator{TKey}(IAsyncEnumerable{ValueTuple{TKey, string}}, int, int, int)"/>
+    public IEnumerable<TokenizedBatch<TKey>> CreateBatchEnumerator<TKey>(IEnumerable<(TKey Key, string Content)> sourceEnumerable, int tokensPerInput, int batchSize, int stride)
+    {
+        return AsyncBatchEnumerator<TKey>.CreateSync(this, sourceEnumerable, tokensPerInput, batchSize, stride);
     }
 
     /// <summary>
