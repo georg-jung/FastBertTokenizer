@@ -32,7 +32,7 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
         await CompareSimpleWikipediaCorpusAsIsImpl(_bertUncasedTok, articles, 512, 100);
     }
 
-    [Theory(Skip = "Does not work yet")]
+    [Theory]
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
     public async Task CompareSimpleWikipediaCorpusAsIsBertMultilingualBge512(Dictionary<int, string> articles)
     {
@@ -40,7 +40,7 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
         await CompareSimpleWikipediaCorpusAsIsImpl(_bertMultilingualTok, articles, 512, 100);
     }
 
-    [Theory(Skip = "Does not work yet")]
+    [Theory]
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
     public async Task CompareSimpleWikipediaCorpusAsIsBertChineseBge512(Dictionary<int, string> articles)
     {
@@ -128,6 +128,11 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
                 {
                     try
                     {
+                        if (IsSameExceptUnk(huggF.InputIds.Span, currentInputIds.Span))
+                        {
+                            continue;
+                        }
+
                         var needsToMatchUpToIdx = currentInputIds.Length - 1;
 
                         // assume [PAD] == 0 here
@@ -174,5 +179,46 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
                 }
             }
         }
+    }
+
+    private bool IsSameExceptUnk(ReadOnlySpan<long> huggF, ReadOnlySpan<long> ours)
+    {
+        var skippedHfUnk = false;
+        var (iHF, iOurs) = (0, 0);
+        while (iHF < huggF.Length && iOurs < ours.Length)
+        {
+            if (huggF[iHF] == ours[iOurs])
+            {
+                iHF++;
+                iOurs++;
+                continue;
+            }
+
+            // [SEP] == 102
+            // We might be at the end earlier because what we tokenized instead of [UNK] might be longer than 1
+            if (skippedHfUnk && ours[iOurs] == 102)
+            {
+                iOurs++;
+                break;
+            }
+
+            // [UNK] == 100
+            // Skip [UNK]s in Hugging Face's result
+            while (iHF < huggF.Length && huggF[iHF] == 100)
+            {
+                skippedHfUnk = true;
+                iHF++;
+            }
+
+            // Skip tokens in our result that are not in Hugging Face's result
+            while (iOurs < ours.Length && ours[iOurs] != huggF[iHF])
+            {
+                iOurs++;
+            }
+        }
+
+        return
+            (iHF == huggF.Length && iOurs == ours.Length)
+            || (skippedHfUnk && iOurs == ours.Length);
     }
 }
