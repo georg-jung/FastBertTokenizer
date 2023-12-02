@@ -10,7 +10,7 @@ public partial class BertTokenizer
     private Dictionary<long, string>? _decodePrefixes;
     private Dictionary<long, string>? _decodeSuffixes;
 
-    public string Decode(ReadOnlySpan<long> tokenIds)
+    public string Decode(ReadOnlySpan<long> tokenIds, bool cleanupTokenizationSpaces = true)
     {
         _ = _prefixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
@@ -31,7 +31,11 @@ public partial class BertTokenizer
         {
             if (_decodePrefixes.TryGetValue(id, out var prefix))
             {
-                sb.Append(' ');
+                if (!cleanupTokenizationSpaces || !EmitNoSpaceBefore(prefix))
+                {
+                    sb.Append(' ');
+                }
+
                 sb.Append(prefix);
             }
 
@@ -41,6 +45,28 @@ public partial class BertTokenizer
             }
         }
 
+        // There is probably a faster implementation of this.
+        // Decode isn't currently the focus though.
+        if (cleanupTokenizationSpaces)
+        {
+            sb.Replace(" ' ", "'");
+            sb.Replace(" n't", "n't");
+            sb.Replace(" 'm", "'m");
+            sb.Replace(" do not", "don't"); // while this seems strange this is what Hugging Face does
+            sb.Replace(" 's", "'s");
+            sb.Replace(" 've", "'ve");
+            sb.Replace(" 're", "'re");
+        }
+
         return sb.ToString();
+    }
+
+    // See https://github.com/huggingface/tokenizers/blob/daf361676bdfd14088f7e0bc087effc6a9cfdf3e/tokenizers/src/decoders/wordpiece.rs#L31
+    private bool EmitNoSpaceBefore(string prefix)
+    {
+        return ".".Equals(prefix, StringComparison.Ordinal)
+            || "?".Equals(prefix, StringComparison.Ordinal)
+            || "!".Equals(prefix, StringComparison.Ordinal)
+            || ",".Equals(prefix, StringComparison.Ordinal);
     }
 }
