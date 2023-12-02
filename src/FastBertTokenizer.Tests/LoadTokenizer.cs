@@ -26,4 +26,12 @@ public class LoadTokenizer
         var tokenizer = new BertTokenizer();
         await tokenizer.LoadVocabularyAsync(path, lowercase);
     }
+
+    [Theory]
+    [InlineData("bert-base-uncased")]
+    public async Task LoadFromHuggingFace(string huggingFaceRepo)
+    {
+        var tokenizer = new BertTokenizer();
+        await tokenizer.LoadFromHuggingFaceAsync(huggingFaceRepo);
+    }
 }

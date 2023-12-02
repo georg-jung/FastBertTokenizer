@@ -4,6 +4,7 @@
 #if NET8_0_OR_GREATER
 using System.Collections.Frozen;
 #endif
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 
@@ -46,6 +47,13 @@ public partial class BertTokenizer
     public void LoadTokenizerJson(Stream tokenizerJsonStream)
     {
         var tok = JsonSerializer.Deserialize<TokenizerJson>(tokenizerJsonStream, _jsonSerializerOptions)
+            ?? throw new ArgumentException("Tokenizer configuration could not be deserialised.");
+        LoadTokenizerJsonImpl(tok);
+    }
+
+    internal async Task LoadTokenizerJsonAsync(HttpClient httpClient, string url)
+    {
+        var tok = await httpClient.GetFromJsonAsync<TokenizerJson>(url, _jsonSerializerOptions)
             ?? throw new ArgumentException("Tokenizer configuration could not be deserialised.");
         LoadTokenizerJsonImpl(tok);
     }
