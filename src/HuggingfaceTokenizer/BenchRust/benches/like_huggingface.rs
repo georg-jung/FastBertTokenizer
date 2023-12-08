@@ -3,21 +3,18 @@ extern crate criterion;
 
 mod common;
 
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::Path;
+// adapted from https://github.com/huggingface/tokenizers/blob/8f9b945c75435d9120b71dfd14364d2571d83c0b/tokenizers/benches/bert_benchmark.rs
+
+use bench::{load};
 
 use criterion::Criterion;
-use tokenizers::models::wordpiece::{WordPiece, WordPieceTrainerBuilder};
-use tokenizers::normalizers::{BertNormalizer, NormalizerWrapper};
+use tokenizers::models::wordpiece::{WordPiece};
+use tokenizers::normalizers::{BertNormalizer};
 use tokenizers::pre_tokenizers::bert::BertPreTokenizer;
 use tokenizers::processors::bert::BertProcessing;
 use tokenizers::{decoders, EncodeInput, Model, TokenizerImpl};
 
-use common::{iter_bench_encode, iter_bench_encode_batch, iter_bench_train};
-use tokenizers::decoders::DecoderWrapper;
-use tokenizers::pre_tokenizers::whitespace::Whitespace;
-use tokenizers::processors::PostProcessorWrapper;
+use common::{iter_bench_encode, iter_bench_encode_batch};
 
 static BATCH_SIZE: usize = 1_000;
 
@@ -45,14 +42,17 @@ fn create_bert_tokenizer(wp: WordPiece) -> BertTokenizer {
 }
 
 pub fn bench_bert(c: &mut Criterion) {
-    let wp = WordPiece::from_file("data/bert-base-uncased-vocab.txt")
+    let vocab_path = "../../../data/baai-bge-small-en/vocab.txt";
+    let (_we_dont_use_this_tokenizer, articles) = load();
+
+    let wp = WordPiece::from_file(vocab_path)
         .build()
         .unwrap();
     let tokenizer = create_bert_tokenizer(wp);
     let mut lines: Vec<EncodeInput> = vec![];
     let mut batches: Vec<Vec<EncodeInput>> = vec![vec![]];
-    for line in BufReader::new(File::open(Path::new("data/big.txt")).unwrap()).lines() {
-        let line: EncodeInput = line.unwrap().into();
+    for line in articles {
+        let line: EncodeInput = line.into();
         lines.push(line.clone());
         if batches.last().unwrap().len() >= BATCH_SIZE {
             batches.push(vec![]);
@@ -69,54 +69,10 @@ pub fn bench_bert(c: &mut Criterion) {
     });
 }
 
-fn bench_train(c: &mut Criterion) {
-    let mut trainer = WordPieceTrainerBuilder::default()
-        .show_progress(false)
-        .build();
-    type Tok = TokenizerImpl<
-        WordPiece,
-        NormalizerWrapper,
-        Whitespace,
-        PostProcessorWrapper,
-        DecoderWrapper,
-    >;
-    let mut tokenizer = Tok::new(WordPiece::default());
-    tokenizer.with_pre_tokenizer(Whitespace {});
-    c.bench_function("WordPiece Train vocabulary (small)", |b| {
-        b.iter_custom(|iters| {
-            iter_bench_train(
-                iters,
-                &mut tokenizer,
-                &mut trainer,
-                vec!["data/small.txt".to_string()],
-            )
-        })
-    });
-
-    let mut tokenizer = Tok::new(WordPiece::default());
-    tokenizer.with_pre_tokenizer(Whitespace {});
-    c.bench_function("WordPiece Train vocabulary (big)", |b| {
-        b.iter_custom(|iters| {
-            iter_bench_train(
-                iters,
-                &mut tokenizer,
-                &mut trainer,
-                vec!["data/big.txt".to_string()],
-            )
-        })
-    });
-}
-
 criterion_group! {
     name = bert_benches;
     config = Criterion::default().sample_size(20);
     targets = bench_bert
 }
 
-criterion_group! {
-    name = benches_train;
-    config = Criterion::default().sample_size(10);
-    targets = bench_train
-}
-
-criterion_main!(bert_benches, benches_train);
+criterion_main!(bert_benches);

@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use criterion::black_box;
 
 use tokenizers::{
-    Decoder, EncodeInput, Model, Normalizer, PostProcessor, PreTokenizer, TokenizerImpl, Trainer,
+    Decoder, EncodeInput, Model, Normalizer, PostProcessor, PreTokenizer, TokenizerImpl,
 };
 
 pub fn iter_bench_encode<M, N, PT, PP, D>(
@@ -55,29 +55,6 @@ where
         let batch = batches[batch_index].clone();
         let start = Instant::now();
         let _ = black_box(tokenizer.encode_batch(batch, false));
-        duration = duration.checked_add(start.elapsed()).unwrap();
-    }
-    duration
-}
-
-pub fn iter_bench_train<T, M, N, PT, PP, D>(
-    iters: u64,
-    tokenizer: &mut TokenizerImpl<M, N, PT, PP, D>,
-    trainer: &mut T,
-    files: Vec<String>,
-) -> Duration
-where
-    T: Trainer<Model = M> + Sync,
-    M: Model + Send + Sync,
-    N: Normalizer + Send + Sync,
-    PT: PreTokenizer + Send + Sync,
-    PP: PostProcessor + Send + Sync,
-    D: Decoder + Send + Sync,
-{
-    let mut duration = Duration::new(0, 0);
-    for _i in 0..iters {
-        let start = Instant::now();
-        tokenizer.train_from_files(trainer, files.clone()).unwrap();
         duration = duration.checked_add(start.elapsed()).unwrap();
     }
     duration
