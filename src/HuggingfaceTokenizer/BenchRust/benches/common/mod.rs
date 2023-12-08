@@ -21,15 +21,13 @@ where
     D: Decoder,
 {
     let mut duration = Duration::new(0, 0);
-    let mut line_index: usize = 0;
     for _i in 0..iters {
-        if line_index >= lines.len() {
-            line_index = 0;
+        for l in lines.iter() {
+            let input = l.clone();
+            let start = Instant::now();
+            let _ = black_box(tokenizer.encode(input, false));
+            duration = duration.checked_add(start.elapsed()).unwrap();
         }
-        let input = lines[line_index].clone();
-        let start = Instant::now();
-        let _ = black_box(tokenizer.encode(input, false));
-        duration = duration.checked_add(start.elapsed()).unwrap();
     }
     duration
 }
@@ -47,15 +45,13 @@ where
     D: Decoder + Send + Sync,
 {
     let mut duration = Duration::new(0, 0);
-    let mut batch_index: usize = 0;
     for _i in 0..iters {
-        if batch_index >= batches.len() {
-            batch_index = 0;
+        for b in batches.iter() {
+            let batch = b.clone();
+            let start = Instant::now();
+            let _ = black_box(tokenizer.encode_batch(batch, false));
+            duration = duration.checked_add(start.elapsed()).unwrap();
         }
-        let batch = batches[batch_index].clone();
-        let start = Instant::now();
-        let _ = black_box(tokenizer.encode_batch(batch, false));
-        duration = duration.checked_add(start.elapsed()).unwrap();
     }
     duration
 }
