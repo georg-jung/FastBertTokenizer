@@ -13,6 +13,7 @@
 
 [![NuGet version (FastBertTokenizer)](https://img.shields.io/nuget/v/FastBertTokenizer.svg?style=flat)](https://www.nuget.org/packages/FastBertTokenizer/)
 ![.NET Build](https://github.com/georg-jung/FastBertTokenizer/actions/workflows/ci.yml/badge.svg)
+[![codecov](https://codecov.io/github/georg-jung/FastBertTokenizer/graph/badge.svg?token=PEINHYEBGH)](https://codecov.io/github/georg-jung/FastBertTokenizer)
 
 A fast and memory-efficient library for WordPiece tokenization as it is used by BERT. Tokenization correctness and speed are automatically evaluated in extensive unit tests and benchmarks.
 
@@ -21,37 +22,30 @@ A fast and memory-efficient library for WordPiece tokenization as it is used by 
 * Enabling you to run your AI workloads on .NET in production.
 * **Correctness** - Results that are equivalent to [HuggingFace Transformers' `AutoTokenizer`'s](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer) in all practical cases.
 * **Speed** - Tokenization should be as fast as reasonably possible.
-* **Ease of use** - The API should be easy to understand and get started with.
+* **Ease of use** - The API should be easy to understand and use.
 
-## Features
+## Getting Started
 
-* same results as [HuggingFace Transformers' `AutoTokenizer`](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer) in all relevant cases.
-* purely managed and dependency-free
-* optimized for high performance and low memory usage
-
-## Getting started
+```bash
+dotnet new console
+dotnet add package FastBertTokenizer
+```
 
 ```csharp
 using FastBertTokenizer;
 
 var tok = new BertTokenizer();
-var maxTokensForModel = 512;
-await tok.LoadVocabularyAsync("vocab.txt", true); // https://huggingface.co/BAAI/bge-small-en/blob/main/vocab.txt
-var text = File.ReadAllText("TextFile.txt");
-var (inputIds, attentionMask, tokenTypeIds) = tok.Tokenize(text, maxTokensForModel);
-Console.WriteLine(string.Join(", ", inputIds.ToArray().Select(x => x.ToString())));
+await tok.LoadFromHuggingFaceAsync("bert-base-uncased");
+var (inputIds, attentionMask, tokenTypeIds) = tok.Encode("Lorem ipsum dolor sit amet.");
+Console.WriteLine(string.Join(", ", inputIds.ToArray()));
+var decoded = tok.Decode(inputIds.Span);
+Console.WriteLine(decoded);
+
+// Output:
+// [101,19544,2213,12997,17421,2079,10626,4133,2572,3388,1012,102]
+// [CLS] lorem ipsum dolor sit amet. [SEP]
 ```
-
-## Comparison of Tokenization Results to [HuggingFace Transformers' `AutoTokenizer`](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer)
-
-For correctness verification about 10.000 articles of [simple english Wikipedia](https://simple.wikipedia.org/wiki/Main_Page) were tokenized using FastBertTokenizer and Huggingface using the [baai bge vocab.txt](https://huggingface.co/BAAI/bge-small-en/blob/main/vocab.txt) file. The tokenization results were exactly the same apart from these two cases:
-
-* [*Letter*](https://simple.wikipedia.org/wiki/Letter) (id 6309) contains assamese characters. Many of them are not represented in the vocabulary used. Huggingface's tokenizer skips exactly one [UNK] token for one of the chars were *FastBertTokenizer* emits one.
-* [*Avignon*](https://simple.wikipedia.org/wiki/Avignon) (id 30153) has Rhône as the last word before hitting the 512 token id limit. If a word can not directly be found in the vocabulary, *FastBertTokenizer* we tries to tokenize prefixes of the word first, while Huggingface directly starts with a diacritic-free version of the word. Thus, *FastBertTokenizer*'s result ends with token id for `r` while huggingface (correctly) emits `rhone`. This edge case is just relevant
-    1. for the last word, after which the tokenized output is cut off and
-    2. if this last word contains diacritics.
-
-These minor differences might be irrelevant in most real-world use cases. All other tested >10.000 articles including chinese and korean characters as well as much less common scripts and right-to-left letters were tokenized exactly the same as by Huggingface's Tokenizer.
+[*example project*](src/examples/QuickStart/)
 
 ## Comparison to [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers)
 
