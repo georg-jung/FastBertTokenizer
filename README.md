@@ -13,9 +13,14 @@
 [![NuGet version (FastBertTokenizer)](https://img.shields.io/nuget/v/FastBertTokenizer.svg?style=flat)](https://www.nuget.org/packages/FastBertTokenizer/)
 ![.NET Build](https://github.com/georg-jung/FastBertTokenizer/actions/workflows/ci.yml/badge.svg)
 
-A fast and memory-efficient library for WordPiece tokenization as it is used by BERT. Tokenization results are tested against the outputs of [HuggingFace Transformers' `AutoTokenizer`](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer).
+A fast and memory-efficient library for WordPiece tokenization as it is used by BERT. Tokenization correctness and speed are automatically evaluated in extensive unit tests and benchmarks.
 
-Serves similar needs and initially inspired by [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers) - thanks for the great work.
+## Goals
+
+* Enabling you to run your AI workloads on .NET in production.
+* **Correctness** - Results that are equivalent to [HuggingFace Transformers' `AutoTokenizer`'s](https://huggingface.co/docs/transformers/v4.33.0/en/model_doc/auto#transformers.AutoTokenizer) in all practical cases.
+* **Speed** - Tokenization should be as fast as reasonably possible.
+* **Ease of use** - The API should be easy to understand and get started with.
 
 ## Features
 
