@@ -5,4 +5,5 @@ using BenchmarkDotNet.Running;
 using Benchmarks;
 
 var tokenizeSpeed = BenchmarkRunner.Run<TokenizeSpeed>();
+var sharpToken = BenchmarkRunner.Run<CompareToSharpToken>();
 var otherLibs = BenchmarkRunner.Run<OtherLibs>();
