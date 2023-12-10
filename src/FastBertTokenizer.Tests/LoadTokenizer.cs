@@ -81,5 +81,6 @@ public class LoadTokenizer
         var tokenizer = new BertTokenizer();
         await tokenizer.LoadTokenizerJsonAsync("data/bert-base-uncased/tokenizer.json");
         await Assert.ThrowsAsync<InvalidOperationException>(() => tokenizer.LoadTokenizerJsonAsync("data/bert-base-uncased/tokenizer.json"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => tokenizer.LoadVocabularyAsync("data/bert-base-uncased/vocab.txt", true));
     }
 }

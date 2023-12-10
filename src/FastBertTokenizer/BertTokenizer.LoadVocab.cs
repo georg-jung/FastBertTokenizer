@@ -32,7 +32,7 @@ public partial class BertTokenizer
     public async Task LoadVocabularyAsync(string vocabTxtFilePath, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD)
     {
         using var sr = new StreamReader(vocabTxtFilePath);
-        await LoadVocabularyImpl(true, sr, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken, normalization)!;
+        await LoadVocabularyAsync(sr, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken, normalization)!;
     }
 
     // these are actually inherited

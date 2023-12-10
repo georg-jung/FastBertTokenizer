@@ -29,7 +29,6 @@ Included items must then not match any entries in the exclude list to remain inc
             <!-- Match assembly file paths: -->
             <ModulePaths>
               <Exclude>
-                <ModulePath>rustlibwrapper\.dll</ModulePath>
                 <ModulePath>xunit\..*</ModulePath>
                 <ModulePath>argon\.dll</ModulePath>
                 <ModulePath>system\.linq\.async\.dll</ModulePath>
