@@ -39,7 +39,7 @@ public partial class BertTokenizer
     /// <summary>
     /// Encode the given input string to token ids per the loaded vocabulary. Write the results to the
     /// given memory areas. When encoding multiple inputs successivly it is more efficient to reuse the
-    /// memory for the results than allocating new memory and returing new arrays.
+    /// same memory.
     /// </summary>
     /// <param name="input">The input to encode.</param>
     /// <param name="inputIds">
