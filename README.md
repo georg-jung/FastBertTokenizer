@@ -1,10 +1,11 @@
 <p align="center">
   <a href="https://www.nuget.org/packages/FastBertTokenizer/">
-    <img
-      alt="FastBertTokenizer logo"
-      src="logo.svg"
-      width="100"
-    />
+    <!-- https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#specifying-the-theme-an-image-is-shown-to -->
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="logo-darkmode.svg">
+      <source media="(prefers-color-scheme: light)" srcset="logo.svg">
+      <img alt="FastBertTokenizer Logo" src="logo.svg" width="100">
+    </picture>
   </a>
 </p>
 
