@@ -136,6 +136,11 @@ public partial class BertTokenizer
 
         void Finish()
         {
+            _unk = (unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unknownToken}."), unknownToken);
+            _cls = (clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}."), clsToken);
+            _sep = (sepId ?? throw new InvalidOperationException($"Vocabulary does not contain sep token {sepToken}."), sepToken);
+            _pad = (padId ?? throw new InvalidOperationException($"Vocabulary does not contain pad token {padToken}."), padToken);
+
 #if NET8_0_OR_GREATER
             _prefixes = prefixes.ToFrozenDictionary();
             _suffixes = suffixes.ToFrozenDictionary();
@@ -145,10 +150,6 @@ public partial class BertTokenizer
 #endif
             _lowercaseInput = convertInputToLowercase;
             _normalization = normalization;
-            _unk = (unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unknownToken}."), unknownToken);
-            _cls = (clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}."), clsToken);
-            _sep = (sepId ?? throw new InvalidOperationException($"Vocabulary does not contain sep token {sepToken}."), sepToken);
-            _pad = (padId ?? throw new InvalidOperationException($"Vocabulary does not contain pad token {padToken}."), padToken);
         }
     }
 }

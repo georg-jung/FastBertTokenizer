@@ -67,6 +67,17 @@ public class LoadTokenizer
         await Should.ThrowAsync<ArgumentException>(tokenizer.LoadTokenizerJsonAsync(path));
     }
 
+    [Fact]
+    public async Task LoadTokenizerFromInvalidVocabTxtAsync()
+    {
+        var tokenizer = new BertTokenizer();
+        await Should.ThrowAsync<InvalidOperationException>(tokenizer.LoadVocabularyAsync("data/invalid/no-cls.txt", true));
+        await Should.ThrowAsync<InvalidOperationException>(tokenizer.LoadVocabularyAsync("data/invalid/no-sep.txt", true));
+        await Should.ThrowAsync<InvalidOperationException>(tokenizer.LoadVocabularyAsync("data/invalid/no-pad.txt", true));
+        await Should.ThrowAsync<InvalidOperationException>(tokenizer.LoadVocabularyAsync("data/invalid/no-unk.txt", true));
+        await tokenizer.LoadVocabularyAsync("data/invalid/minimal.txt", true);
+    }
+
     [Theory]
     [InlineData("bert-base-uncased")]
     public async Task LoadFromHuggingFace(string huggingFaceRepo)
@@ -82,5 +93,24 @@ public class LoadTokenizer
         await tokenizer.LoadTokenizerJsonAsync("data/bert-base-uncased/tokenizer.json");
         await Assert.ThrowsAsync<InvalidOperationException>(() => tokenizer.LoadTokenizerJsonAsync("data/bert-base-uncased/tokenizer.json"));
         await Assert.ThrowsAsync<InvalidOperationException>(() => tokenizer.LoadVocabularyAsync("data/bert-base-uncased/vocab.txt", true));
+    }
+
+    [Fact]
+    public void CantWorkWithoutVocab()
+    {
+        var tokenizer = new BertTokenizer();
+        Assert.Throws<InvalidOperationException>(() => tokenizer.Encode("Lorem ipsum dolor sit amet."));
+        Assert.Throws<InvalidOperationException>(() => tokenizer.Decode([0, 1, 2, 3]));
+    }
+
+    [Fact]
+    public async Task ArgumentNullExceptions()
+    {
+        var tokenizer = new BertTokenizer();
+        await Assert.ThrowsAsync<ArgumentNullException>(() => tokenizer.LoadTokenizerJsonAsync((Stream)null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => tokenizer.LoadVocabularyAsync("data/bert-base-uncased/vocab.txt", true, unknownToken: null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => tokenizer.LoadVocabularyAsync("data/bert-base-uncased/vocab.txt", true, clsToken: null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => tokenizer.LoadVocabularyAsync("data/bert-base-uncased/vocab.txt", true, sepToken: null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => tokenizer.LoadVocabularyAsync("data/bert-base-uncased/vocab.txt", true, padToken: null!));
     }
 }
