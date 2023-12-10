@@ -61,18 +61,18 @@ public partial class BertTokenizer
     /// Fill the given destination memory areas with padding tokens up to this length.
     /// </param>
     /// <returns>The number of token ids produced.</returns>
-    public int Tokenize(string input, Span<long> inputIds, Span<long> attentionMask, Span<long> tokenTypeIds, int? padTo = null)
+    public int Encode(string input, Span<long> inputIds, Span<long> attentionMask, Span<long> tokenTypeIds, int? padTo = null)
     {
-        var inputIdCnt = Tokenize(input, inputIds, attentionMask, padTo);
+        var inputIdCnt = Encode(input, inputIds, attentionMask, padTo);
         tokenTypeIds.Slice(0, inputIdCnt).Fill(0);
 
         return inputIdCnt;
     }
 
-    /// <inheritdoc cref="Tokenize(string, Span{long}, Span{long}, Span{long}, int?)"/>
-    public int Tokenize(string input, Span<long> inputIds, Span<long> attentionMask, int? padTo = null)
+    /// <inheritdoc cref="Encode(string, Span{long}, Span{long}, Span{long}, int?)"/>
+    public int Encode(string input, Span<long> inputIds, Span<long> attentionMask, int? padTo = null)
     {
-        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, 0, inputIds, out var _, padTo);
+        var (inputIdCnt, nonPaddedCnt) = Encode(input, 0, inputIds, out var _, padTo);
         attentionMask.Slice(0, nonPaddedCnt).Fill(1);
         attentionMask.Slice(nonPaddedCnt, inputIdCnt - nonPaddedCnt).Fill(0);
         return inputIdCnt;
@@ -121,7 +121,7 @@ public partial class BertTokenizer
     /// <param name="maximumTokens">The maximum number of token ids to encode. Most bert models support inputs of up to 512 tokens.</param>
     /// <param name="padTo">Create an input_ids array of at least this length and fill possible unused positions at the end with the padding token id.</param>
     /// <returns>input_ids, attention_mask and token_type_ids that might be passed to typical BERT models.</returns>
-    public (ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds) Tokenize(string input, int maximumTokens = 512, int? padTo = null)
+    public (ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds) Encode(string input, int maximumTokens = 512, int? padTo = null)
     {
         if (_inputIdReturnBuffer is null || _inputIdReturnBuffer.Length < maximumTokens)
         {
@@ -131,7 +131,7 @@ public partial class BertTokenizer
             Array.Fill(_tokenTypeIdsReturnBuffer, 0);
         }
 
-        var (inputIdCnt, nonPaddedCnt) = Tokenize(input, 0, _inputIdReturnBuffer, out var _, padTo);
+        var (inputIdCnt, nonPaddedCnt) = Encode(input, 0, _inputIdReturnBuffer, out var _, padTo);
         Array.Fill(_attentionMaskReturnBuffer!, 1, 0, nonPaddedCnt);
         Array.Fill(_attentionMaskReturnBuffer!, 0, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
         return (
@@ -140,7 +140,7 @@ public partial class BertTokenizer
             _tokenTypeIdsReturnBuffer.AsMemory(0, inputIdCnt));
     }
 
-    internal (TokenizedRange<TKey> TokenizedRange, int NonPaddingLen) TokenizeBatchElement<TKey>(
+    internal (TokenizedRange<TKey> TokenizedRange, int NonPaddingLen) EncodeBatchElement<TKey>(
         TKey inputKey,
         string input,
         int inputOffset,
@@ -162,14 +162,14 @@ public partial class BertTokenizer
             used = strideInputIds.Length + 1;
         }
 
-        var (_, nonPaddedCnt) = Tokenize(input, inputOffset, inputIds.Slice(used), out var lastTokenizedWordStartIndex, inputIds.Length - used, includePartialLastWord: !withStride, emitClsToken: used == 0);
+        var (_, nonPaddedCnt) = Encode(input, inputOffset, inputIds.Slice(used), out var lastTokenizedWordStartIndex, inputIds.Length - used, includePartialLastWord: !withStride, emitClsToken: used == 0);
         attentionMask.Slice(0, used + nonPaddedCnt).Fill(1);
         attentionMask.Slice(used + nonPaddedCnt).Fill(0);
 
         return (new TokenizedRange<TKey>(inputKey, inputOffset, lastTokenizedWordStartIndex), used + nonPaddedCnt);
     }
 
-    private (int Length, int NonPadding) Tokenize(string input, int inputOffset, Span<long> inputIds, out int? lastTokenizedWordStartIndex, int? padTo = null, bool includePartialLastWord = true, bool emitClsToken = true)
+    private (int Length, int NonPadding) Encode(string input, int inputOffset, Span<long> inputIds, out int? lastTokenizedWordStartIndex, int? padTo = null, bool includePartialLastWord = true, bool emitClsToken = true)
     {
         _ = _prefixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");

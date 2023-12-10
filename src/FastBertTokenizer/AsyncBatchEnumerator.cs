@@ -75,7 +75,7 @@ internal class AsyncBatchEnumerator<TKey>
             }
 
             var p = _pivot.Value;
-            var (corr, nonPadding) = _tokenizer.TokenizeBatchElement(
+            var (corr, nonPadding) = _tokenizer.EncodeBatchElement(
                 p.Key,
                 p.Conent,
                 p.Offset,

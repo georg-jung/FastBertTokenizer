@@ -100,7 +100,7 @@ namespace FastBertTokenizer.Tests
             }
 
             var huggF = RustTokenizer.TokenizeAndGetIds(content, 512);
-            var ours = _uut.Tokenize(content, 512, 512);
+            var ours = _uut.Encode(content, 512, 512);
             try
             {
                 ours.InputIds.ShouldBe(huggF.InputIds);

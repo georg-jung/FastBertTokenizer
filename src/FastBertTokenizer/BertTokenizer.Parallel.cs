@@ -41,7 +41,7 @@ public partial class BertTokenizer
     /// The maximum number of token ids to produce for every single input in the batch.
     /// Most BERT models support a maximum of 512 tokens per input.
     /// </param>
-    public void Tokenize(ReadOnlyMemory<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, Memory<long> tokenTypeIds, int maximumTokens = 512)
+    public void Encode(ReadOnlyMemory<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, Memory<long> tokenTypeIds, int maximumTokens = 512)
     {
         var resultLen = maximumTokens * inputs.Length;
         if (tokenTypeIds.Length != resultLen)
@@ -49,12 +49,12 @@ public partial class BertTokenizer
             throw new ArgumentException($"{nameof(tokenTypeIds)} must have {resultLen} elements but had {tokenTypeIds.Length}.", nameof(tokenTypeIds));
         }
 
-        Tokenize(inputs, inputIds, attentionMask, maximumTokens);
+        Encode(inputs, inputIds, attentionMask, maximumTokens);
         tokenTypeIds.Span.Fill(0);
     }
 
-    /// <inheritdoc cref="Tokenize(ReadOnlyMemory{string}, Memory{long}, Memory{long}, Memory{long}, int)"/>
-    public void Tokenize(ReadOnlyMemory<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, int maximumTokens = 512)
+    /// <inheritdoc cref="Encode(ReadOnlyMemory{string}, Memory{long}, Memory{long}, Memory{long}, int)"/>
+    public void Encode(ReadOnlyMemory<string> inputs, Memory<long> inputIds, Memory<long> attentionMask, int maximumTokens = 512)
     {
         var resultLen = maximumTokens * inputs.Length;
         if (inputIds.Length != resultLen || attentionMask.Length != resultLen)
@@ -87,7 +87,7 @@ public partial class BertTokenizer
             for (var i = param.StartInclusive; i < param.EndExclusive; i++)
             {
                 var startIdx = maximumTokens * i;
-                var (_, nonPad) = Tokenize(inputSpan[i], 0, inputIds.Slice(startIdx, maximumTokens).Span, out var _, maximumTokens);
+                var (_, nonPad) = Encode(inputSpan[i], 0, inputIds.Slice(startIdx, maximumTokens).Span, out var _, maximumTokens);
                 var span = attentionMask.Slice(startIdx, maximumTokens).Span;
                 span.Slice(0, nonPad).Fill(1);
                 span.Slice(nonPad, maximumTokens - nonPad).Fill(0);
