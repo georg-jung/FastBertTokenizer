@@ -140,13 +140,14 @@ public partial class BertTokenizer
             _tokenTypeIdsReturnBuffer.AsMemory(0, inputIdCnt));
     }
 
-    internal TokenizedRange<TKey> TokenizeBatchElement<TKey>(
+    internal (TokenizedRange<TKey> TokenizedRange, int NonPaddingLen) TokenizeBatchElement<TKey>(
         TKey inputKey,
         string input,
         int inputOffset,
         ReadOnlySpan<long> strideInputIds,
         Span<long> inputIds,
-        Span<long> attentionMask)
+        Span<long> attentionMask,
+        bool withStride)
     {
         if (attentionMask.Length != inputIds.Length)
         {
@@ -161,11 +162,11 @@ public partial class BertTokenizer
             used = strideInputIds.Length + 1;
         }
 
-        var (_, nonPaddedCnt) = Tokenize(input, inputOffset, inputIds.Slice(used), out var lastTokenizedWordStartIndex, inputIds.Length - used, includePartialLastWord: true, emitClsToken: used == 0);
+        var (_, nonPaddedCnt) = Tokenize(input, inputOffset, inputIds.Slice(used), out var lastTokenizedWordStartIndex, inputIds.Length - used, includePartialLastWord: !withStride, emitClsToken: used == 0);
         attentionMask.Slice(0, used + nonPaddedCnt).Fill(1);
         attentionMask.Slice(used + nonPaddedCnt).Fill(0);
 
-        return new TokenizedRange<TKey>(inputKey, inputOffset, lastTokenizedWordStartIndex);
+        return (new TokenizedRange<TKey>(inputKey, inputOffset, lastTokenizedWordStartIndex), used + nonPaddedCnt);
     }
 
     private (int Length, int NonPadding) Tokenize(string input, int inputOffset, Span<long> inputIds, out int? lastTokenizedWordStartIndex, int? padTo = null, bool includePartialLastWord = true, bool emitClsToken = true)

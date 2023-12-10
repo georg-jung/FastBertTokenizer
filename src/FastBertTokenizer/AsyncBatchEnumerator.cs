@@ -17,6 +17,7 @@ internal class AsyncBatchEnumerator<TKey>
     private readonly IAsyncEnumerator<(TKey Key, string Content)>? _asyncSourceEnumerator;
     private readonly IEnumerator<(TKey Key, string Content)>? _sourceEnumerator;
     private (TKey Key, string Conent, int Offset)? _pivot;
+    private ReadOnlyMemory<long> _strideInputIds = default;
 
     private AsyncBatchEnumerator(BertTokenizer tokenizer, IAsyncEnumerable<(TKey Key, string Content)> asyncSourceEnumerable, int tokensPerInput, int batchSize, int stride)
         : this(tokenizer, tokensPerInput, batchSize, stride)
@@ -59,7 +60,7 @@ internal class AsyncBatchEnumerator<TKey>
     public async ValueTask<bool> MoveNextAsync()
     {
         var i = 0;
-        ReadOnlyMemory<long> strideInputIds = Array.Empty<long>();
+        var withStride = _stride > 0;
         for (i = 0; i < _batchSize; i++)
         {
             if (!_pivot.HasValue)
@@ -74,13 +75,14 @@ internal class AsyncBatchEnumerator<TKey>
             }
 
             var p = _pivot.Value;
-            var corr = _tokenizer.TokenizeBatchElement(
+            var (corr, nonPadding) = _tokenizer.TokenizeBatchElement(
                 p.Key,
                 p.Conent,
                 p.Offset,
-                strideInputIds.Span,
+                _strideInputIds.Span,
                 _inputIds.AsSpan(i * _tokensPerInput, _tokensPerInput),
-                _attentionMask.AsSpan(i * _tokensPerInput, _tokensPerInput));
+                _attentionMask.AsSpan(i * _tokensPerInput, _tokensPerInput),
+                withStride);
 
             _outputCorrelation[i] = corr;
             _pivot = corr switch
@@ -89,10 +91,10 @@ internal class AsyncBatchEnumerator<TKey>
                 _ => null,
             };
 
-            strideInputIds = _pivot switch
+            _strideInputIds = _pivot switch
             {
                 null => Array.Empty<long>(),
-                _ => _inputIds.AsMemory(((i + 1) * _tokensPerInput) - _stride, _stride),
+                _ => _inputIds.AsMemory((i * _tokensPerInput) + nonPadding - 1 - _stride, _stride),
             };
         }
 
