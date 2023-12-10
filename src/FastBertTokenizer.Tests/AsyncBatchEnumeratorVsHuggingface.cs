@@ -105,12 +105,9 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
                 }
 
                 var tokRg = tokRgNullable.Value;
+                var currentInputIds = batch.InputIds.Slice(i * maxInputTokens, maxInputTokens);
+                currentInputIds.Span[^1].ShouldBeOneOf(0, 102); // [PAD] = 0, [SEP] = 102
                 if (tokRg.Offset > 0)
-                {
-                    continue;
-                }
-
-                if (tokRg.Key == 6309 || tokRg.Key == 30153 || tokRg.Key == 60246)
                 {
                     continue;
                 }
@@ -118,7 +115,6 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
                 var content = articles[tokRg.Key];
                 var huggF = RustTokenizer.TokenizeAndGetIds(content, maxInputTokens);
 
-                var currentInputIds = batch.InputIds.Slice(i * maxInputTokens, maxInputTokens);
                 try
                 {
                     currentInputIds.ShouldBe(huggF.InputIds);
@@ -128,7 +124,15 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
                 {
                     try
                     {
-                        if (IsSameExceptUnk(huggF.InputIds.Span, currentInputIds.Span))
+                        if (CouldWeTokenizeInsteadOfUnk(huggF.InputIds.Span, currentInputIds.Span))
+                        {
+                            continue;
+                        }
+                        else if (DidWeEmitTwoUnkWhereHuggingFaceEmittedOne(huggF.InputIds.Span, currentInputIds.Span))
+                        {
+                            continue;
+                        }
+                        else if (DidWeEmitOneUnkWhereHuggingFaceJustSkippedSomething(huggF.InputIds.Span, currentInputIds.Span))
                         {
                             continue;
                         }
@@ -181,7 +185,8 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
         }
     }
 
-    private bool IsSameExceptUnk(ReadOnlySpan<long> huggF, ReadOnlySpan<long> ours)
+    // Were we able to tokenize something, that Hugging Face tokenized as [UNK]?
+    private bool CouldWeTokenizeInsteadOfUnk(ReadOnlySpan<long> huggF, ReadOnlySpan<long> ours)
     {
         var skippedHfUnk = false;
         var (iHF, iOurs) = (0, 0);
@@ -220,5 +225,85 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
         return
             (iHF == huggF.Length && iOurs == ours.Length)
             || (skippedHfUnk && iOurs == ours.Length);
+    }
+
+    // Did we emit two [UNK] where Hugging Face just emitted one?
+    private bool DidWeEmitTwoUnkWhereHuggingFaceEmittedOne(ReadOnlySpan<long> huggF, ReadOnlySpan<long> ours)
+    {
+        var lastHuggFWasUnk = false;
+        var (iHF, iOurs) = (0, 0);
+        var cases = 0;
+        while (iHF < huggF.Length && iOurs < ours.Length)
+        {
+            if (huggF[iHF] == ours[iOurs])
+            {
+                lastHuggFWasUnk = huggF[iHF] == 100;
+                iHF++;
+                iOurs++;
+                continue;
+            }
+
+            if (lastHuggFWasUnk && ours[iOurs] == 100)
+            {
+                iOurs++;
+                lastHuggFWasUnk = false;
+                cases++;
+                continue;
+            }
+
+            // [SEP] == 102
+            // We might be at the end earlier because we tokenized two [UNK] instead of one (possibly in more than one case too).
+            if (cases > 0 && iHF + cases == iOurs && ours[iOurs] == 102)
+            {
+                iOurs++;
+                break;
+            }
+
+            // The tokens were just different and that we emitted two [UNK] where Hugging Face emitted one
+            // was not the reason for that.
+            break;
+        }
+
+        return
+            (iHF == huggF.Length && iOurs == ours.Length)
+            || (iHF + cases == iOurs && iOurs == ours.Length);
+    }
+
+    // Did we emit two [UNK] where Hugging Face just emitted one?
+    private bool DidWeEmitOneUnkWhereHuggingFaceJustSkippedSomething(ReadOnlySpan<long> huggF, ReadOnlySpan<long> ours)
+    {
+        var (iHF, iOurs) = (0, 0);
+        var cases = 0;
+        while (iHF < huggF.Length && iOurs < ours.Length)
+        {
+            if (huggF[iHF] == ours[iOurs])
+            {
+                iHF++;
+                iOurs++;
+                continue;
+            }
+
+            if (ours[iOurs] == 100 && iOurs + 1 < ours.Length && ours[iOurs + 1] == huggF[iHF])
+            {
+                iOurs++;
+                cases++;
+                continue;
+            }
+
+            // [SEP] == 102
+            // We might be at the end earlier because we emited [UNK] were Hugging Face just skipped something.
+            if (cases > 0 && iHF + cases == iOurs && ours[iOurs] == 102)
+            {
+                iOurs++;
+                break;
+            }
+
+            // The tokens were just different and that we emitted [UNK] where Hugging Face didn't was not the reason for that.
+            break;
+        }
+
+        return
+            (iHF == huggF.Length && iOurs == ours.Length)
+            || (iHF + cases == iOurs && iOurs == ours.Length);
     }
 }
