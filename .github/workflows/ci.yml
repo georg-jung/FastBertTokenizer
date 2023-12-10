@@ -59,6 +59,7 @@ jobs:
         dotnet test
         -c Release --no-restore --no-build
         /p:ContinuousIntegrationBuild=true
+        -s CodeCoverage.runsettings
         --collect:"XPlat Code Coverage"
         --logger "GitHubActions;summary.includePassedTests=true;summary.includeSkippedTests=true"
         --
