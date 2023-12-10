@@ -145,6 +145,7 @@ internal ref struct PreTokenizingEnumerator
     /// <param name="cp">Character to check.</param>
     /// <returns>True we consider the character a punctuation character, otherwise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1204:Static elements should appear before instance elements", Justification = "Makes more sense here.")]
     private static bool IsPunctuation(char cp)
     {
         // We treat all non-letter/number ASCII as punctuation.
