@@ -9,10 +9,10 @@ namespace FastBertTokenizer.Tests;
 [Collection("UsesRustLib")]
 public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
 {
-    private BertTokenizer _baaiBgeTok = new();
-    private BertTokenizer _bertUncasedTok = new();
-    private BertTokenizer _bertMultilingualTok = new();
-    private BertTokenizer _bertChineseTok = new();
+    private readonly BertTokenizer _baaiBgeTok = new();
+    private readonly BertTokenizer _bertUncasedTok = new();
+    private readonly BertTokenizer _bertMultilingualTok = new();
+    private readonly BertTokenizer _bertChineseTok = new();
 
     public async Task InitializeAsync()
     {

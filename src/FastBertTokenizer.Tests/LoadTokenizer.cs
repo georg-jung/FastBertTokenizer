@@ -35,6 +35,7 @@ public class LoadTokenizer
         await tokenizer.LoadFromHuggingFaceAsync(huggingFaceRepo);
     }
 
+    [Fact]
     public async Task PreventLoadAfterLoad()
     {
         var tokenizer = new BertTokenizer();
