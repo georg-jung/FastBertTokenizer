@@ -45,6 +45,7 @@ Console.WriteLine(decoded);
 // [101,19544,2213,12997,17421,2079,10626,4133,2572,3388,1012,102]
 // [CLS] lorem ipsum dolor sit amet. [SEP]
 ```
+
 [*example project*](src/examples/QuickStart/)
 
 ## Comparison to [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers)
@@ -58,19 +59,6 @@ Console.WriteLine(decoded);
 * handles other alphabets such as greek and right-to-left languages
 
 Note that while [BERTTokenizers handles token type incorrectly](https://github.com/NMZivkovic/BertTokenizers/issues/18), it does support input of two pieces of text that are tokenized with a separator in between. *FastBertTokenizer* currently does not support this.
-
-## Benchmark
-
-> Tokenizing the first 5000 characters of 10254 articles of simple english Wikipedia.
-> ThinkPad T14s Gen 1, AMD Ryzen 7 PRO 4750U, 32GB memory
-
-| Method                      | Mean       | Error    | StdDev   | Gen0         | Gen1       | Gen2      | Allocated  |
-|---------------------------- |-----------:|---------:|---------:|-------------:|-----------:|----------:|-----------:|
-| [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers)                    | 4,942.0 ms | 54.79 ms | 48.57 ms | 1001000.0000 | 95000.0000 | 4000.0000 | 5952.43 MB |
-| FastBertTokenizerAllocating |   529.5 ms |  8.90 ms | 10.59 ms |   61000.0000 | 31000.0000 | 2000.0000 |  350.75 MB |
-| FastBertTokenizerMemReuse   |   404.5 ms |  7.72 ms |  7.22 ms |   68000.0000 |          - |         - |  136.83 MB |
-
-The `FastBertTokenizerMemReuse` benchmark writes the results of the tokenization to the same memory area while `FastBertTokenizerAllocating` allocates new memory for it's return values. See [`src/Benchmarks`](/src/Benchmarks/) for details how these benchmarks were perfomed.
 
 ## Logo
 
