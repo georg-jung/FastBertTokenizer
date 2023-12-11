@@ -7,6 +7,7 @@ using System.Collections.Frozen;
 
 using System.Globalization;
 using System.Text;
+using System.Threading.Channels;
 
 namespace FastBertTokenizer;
 
@@ -104,6 +105,13 @@ public partial class BertTokenizer
     public IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsyncBatchEnumerator<TKey>(IAsyncEnumerable<(TKey Key, string Content)> sourceEnumerable, int tokensPerInput, int batchSize, int stride)
     {
         return AsyncBatchEnumerator<TKey>.CreateAsync(this, sourceEnumerable, tokensPerInput, batchSize, stride);
+    }
+
+    public IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsyncBatchEnumerator<TKey>(ChannelReader<(TKey Key, string Content)> sourceChannel, int tokensPerInput, int batchSize, int stride)
+    {
+        return new ParallelBatchEnumerator<TKey>(
+            Environment.ProcessorCount,
+            () => AsyncBatchEnumerator<TKey>.CreateAsync(this, sourceChannel.ReadAllAsync(), tokensPerInput, batchSize, stride).GetAsyncEnumerator());
     }
 
     /// <returns>An <see cref="IEnumerable{T}"/> which yields tokenized batches for processing by e.g. an AI model.</returns>
