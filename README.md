@@ -42,7 +42,7 @@ var decoded = tok.Decode(inputIds.Span);
 Console.WriteLine(decoded);
 
 // Output:
-// [101,19544,2213,12997,17421,2079,10626,4133,2572,3388,1012,102]
+// 101, 19544, 2213, 12997, 17421, 2079, 10626, 4133, 2572, 3388, 1012, 102
 // [CLS] lorem ipsum dolor sit amet. [SEP]
 ```
 
