@@ -1,6 +1,7 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Threading.Channels;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
@@ -76,7 +77,7 @@ public class TokenizeSpeed
     [Benchmark]
     public IReadOnlyCollection<(ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds)> MultithreadedAllocating()
     {
-        // this might be interesting to benchmark but doesn't make much sense as a real world use case
+        // This would produce wrong results because BertTokenizer is not thread-safe.
         List<(ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds)> res = new(_corpus.Length);
         foreach(var x in _corpus.AsParallel().AsOrdered().Select(x => _tokenizer.Tokenize(x, _maxSequenceLength)))
         {
@@ -120,6 +121,53 @@ public class TokenizeSpeed
 
         _tokenizer.Tokenize(corpMem, iids, attm, _maxSequenceLength);
         return (iids.AsMemory(), attm.AsMemory(), toktyp.AsMemory());
+    }
+
+    [Benchmark]
+    public async Task<List<object>> ParallelBatchEnumerator()
+    {
+        var ch = Channel.CreateBounded<(int, string)>(10);
+        async Task FillChannel()
+        {
+            foreach (var (i, text) in _corpus.Select((x, i) => (i, x)))
+            {
+                await ch.Writer.WriteAsync((i, text));
+            }
+
+            ch.Writer.Complete();
+        }
+
+        var channelTask = Task.Run(FillChannel);
+        var ret = new List<object>(_corpus.Length / 100);
+        await foreach (var batch in _tokenizer.CreateAsyncBatchEnumerator(ch.Reader, _maxSequenceLength, 100, 0))
+        {
+            ret.Add(batch.OutputCorrelation);
+        }
+
+        await channelTask;
+
+        return ret;
+    }
+
+    [Benchmark]
+    public async Task<List<object>> BatchEnumerator()
+    {
+        async IAsyncEnumerable<(int, string)> Enumerate()
+        {
+            await Task.Yield();
+            foreach (var (i, text) in _corpus.Select((x, i) => (i, x)))
+            {
+                yield return (i, text);
+            }
+        }
+
+        var ret = new List<object>(_corpus.Length / 100);
+        await foreach (var batch in _tokenizer.CreateAsyncBatchEnumerator(Enumerate(), _maxSequenceLength, 100, 0))
+        {
+            ret.Add(batch.OutputCorrelation);
+        }
+
+        return ret;
     }
 
     private sealed class Config : ManualConfig
