@@ -122,14 +122,14 @@ public partial class BertTokenizer
     }
 
     /// <summary>
-    /// Encode the given input string to token ids per the loaded vocabulary. The returned <see cref="ReadOnlyMemory{T}" /> instances
-    /// are only valid until the next call to this method, as the internal buffers are reused for efficiency.
+    /// Encode the given input string to token ids per the loaded vocabulary. The memory the returned <see cref="Memory{T}" /> instances
+    /// point to will be reused and overwritten on the next call to this method, as the internal buffers are reused for efficiency.
     /// </summary>
     /// <param name="input">The input to encode.</param>
     /// <param name="maximumTokens">The maximum number of token ids to encode. Most bert models support inputs of up to 512 tokens.</param>
     /// <param name="padTo">Create an input_ids array of at least this length and fill possible unused positions at the end with the padding token id.</param>
     /// <returns>input_ids, attention_mask and token_type_ids that might be passed to typical BERT models.</returns>
-    public (ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds) Encode(string input, int maximumTokens = 512, int? padTo = null)
+    public (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) Encode(string input, int maximumTokens = 512, int? padTo = null)
     {
         if (_inputIdReturnBuffer is null || _inputIdReturnBuffer.Length < maximumTokens)
         {

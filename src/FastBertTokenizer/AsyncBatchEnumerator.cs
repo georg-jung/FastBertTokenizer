@@ -161,9 +161,9 @@ internal class AsyncBatchEnumerator<TKey>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:File may only contain a single type", Justification = "Reviewed.")]
 public class TokenizedBatch<TKey>
 {
-    public ReadOnlyMemory<long> InputIds { get; internal set; }
+    public Memory<long> InputIds { get; internal set; }
 
-    public ReadOnlyMemory<long> AttentionMask { get; internal set; }
+    public Memory<long> AttentionMask { get; internal set; }
 
-    public ReadOnlyMemory<TokenizedRange<TKey>?> OutputCorrelation { get; set; }
+    public Memory<TokenizedRange<TKey>?> OutputCorrelation { get; set; }
 }
