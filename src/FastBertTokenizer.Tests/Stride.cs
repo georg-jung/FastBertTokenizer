@@ -42,7 +42,7 @@ public class Stride : IAsyncLifetime
         }
 
         var allNulls = new long[maxInputTokens];
-        ReadOnlyMemory<long>? beforeInputIds = null;
+        Memory<long>? beforeInputIds = null;
         await foreach (var batch in uut.CreateAsyncBatchEnumerator(EnumerateContent(), maxInputTokens, batchSize, stride))
         {
             for (var i = 0; i < batch.InputIds.Length / maxInputTokens; i++)

@@ -38,7 +38,7 @@ public static partial class RustTokenizer
         }
     }
 
-    public static (ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds) TokenizeAndGetIds(string input, int maxTokenIds = 512)
+    public static (Memory<long> InputIds, Memory<long> AttentionMask, Memory<long> TokenTypeIds) TokenizeAndGetIds(string input, int maxTokenIds = 512)
     {
         if (_inputIds == null || _inputIds.Length < maxTokenIds || _attentionMask is null)
         {
