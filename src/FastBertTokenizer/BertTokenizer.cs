@@ -107,10 +107,10 @@ public partial class BertTokenizer
         return AsyncBatchEnumerator<TKey>.CreateAsync(this, sourceEnumerable, tokensPerInput, batchSize, stride);
     }
 
-    public IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsyncBatchEnumerator<TKey>(ChannelReader<(TKey Key, string Content)> sourceChannel, int tokensPerInput, int batchSize, int stride)
+    public IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsyncBatchEnumerator<TKey>(ChannelReader<(TKey Key, string Content)> sourceChannel, int tokensPerInput, int batchSize, int stride, int? maxDegreeOfParallelism = null)
     {
         return new ParallelBatchEnumerator<TKey>(
-            Environment.ProcessorCount,
+            maxDegreeOfParallelism ?? Environment.ProcessorCount,
             () => AsyncBatchEnumerator<TKey>.CreateAsync(this, sourceChannel.ReadAllAsync(), tokensPerInput, batchSize, stride).GetAsyncEnumerator());
     }
 
