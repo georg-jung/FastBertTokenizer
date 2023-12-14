@@ -73,7 +73,7 @@ jobs:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     - run: dotnet pack -c Release --no-restore --no-build /p:ContinuousIntegrationBuild=true
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.Version }}
         path: bin/Packages/Release/**/*

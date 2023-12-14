@@ -27,7 +27,7 @@ jobs:
     - run: cargo bench
       working-directory: src/HuggingfaceTokenizer/BenchRust
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: criterion-reports-${{ steps.nbgv.outputs.Version }}
         path: src/HuggingfaceTokenizer/BenchRust/target/criterion/**/*
