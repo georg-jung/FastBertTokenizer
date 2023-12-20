@@ -23,7 +23,7 @@
     <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.16.3" />
     <PackageVersion Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.16.3" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageVersion Include="PolySharp" Version="1.14.0" />
+    <PackageVersion Include="PolySharp" Version="1.14.1" />
     <PackageVersion Include="Shouldly" Version="4.2.1" />
     <PackageVersion Include="SimpleSIMD" Version="4.6.0" />
     <PackageVersion Include="Verify.Xunit" Version="22.8.0" />
