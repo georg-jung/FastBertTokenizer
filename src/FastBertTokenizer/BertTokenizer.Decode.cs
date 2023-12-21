@@ -25,8 +25,22 @@ public partial class BertTokenizer
             _decodePrefixes.Add(_pad.Id, _pad.Token);
         }
 
+        if (tokenIds.Length == 0)
+        {
+            return string.Empty;
+        }
+
         var sb = new StringBuilder();
-        sb.Append(_decodePrefixes[tokenIds[0]]);
+        if (_decodePrefixes.TryGetValue(tokenIds[0], out var firstPrefix))
+        {
+            sb.Append(firstPrefix);
+        }
+        else
+        {
+            // Our decoded text does not start with a word start but in the middle of a word.
+            sb.Append(_decodeSuffixes[tokenIds[0]]);
+        }
+
         foreach (var id in tokenIds.Slice(1))
         {
             if (_decodePrefixes.TryGetValue(id, out var prefix))

@@ -37,4 +37,26 @@ public class Decode : IAsyncLifetime
             }
         }
     }
+
+    [Fact]
+    public void DecodeStartingFromSuffix()
+    {
+        // 19544 is lore
+        // 2213 is ##m
+        long[] loremIpsum = [101, 19544, 2213, 12997, 17421, 2079, 10626, 4133, 2572, 3388, 1012, 102];
+        var decoded = _uut.Decode(loremIpsum);
+        decoded.ShouldStartWith("[CLS] lorem ipsum");
+
+        long[] startsWithSuffix = loremIpsum[2..];
+        decoded = _uut.Decode(startsWithSuffix);
+        decoded.ShouldStartWith("m ipsum");
+    }
+
+    [Fact]
+    public void DecodeEmpty()
+    {
+        long[] empty = [];
+        var decoded = _uut.Decode(empty);
+        decoded.ShouldBe(string.Empty);
+    }
 }
