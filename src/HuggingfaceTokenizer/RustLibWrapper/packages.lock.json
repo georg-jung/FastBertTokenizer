@@ -20,9 +20,9 @@
       },
       "StyleCop.Analyzers.Unstable": {
         "type": "Direct",
-        "requested": "[1.2.0.507, )",
-        "resolved": "1.2.0.507",
-        "contentHash": "gTY3IQdRqDJ4hbhSA3e/R48oE8b/OiKfvwkt1QdNVfrJK2gMHBV8ldaHJ885jxWZfllK66soa/sdcjh9bX49Tw=="
+        "requested": "[1.2.0.553, )",
+        "resolved": "1.2.0.553",
+        "contentHash": "kJA3HL54/oAsjQMYjmyiAaHisDtZl3f/r6638/mD6ct40o/IVDWk0NIK9kxkWZN3Qj1260Ut2cjmKHa/cFlHAg=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -54,9 +54,9 @@
       },
       "StyleCop.Analyzers.Unstable": {
         "type": "Direct",
-        "requested": "[1.2.0.507, )",
-        "resolved": "1.2.0.507",
-        "contentHash": "gTY3IQdRqDJ4hbhSA3e/R48oE8b/OiKfvwkt1QdNVfrJK2gMHBV8ldaHJ885jxWZfllK66soa/sdcjh9bX49Tw=="
+        "requested": "[1.2.0.553, )",
+        "resolved": "1.2.0.553",
+        "contentHash": "kJA3HL54/oAsjQMYjmyiAaHisDtZl3f/r6638/mD6ct40o/IVDWk0NIK9kxkWZN3Qj1260Ut2cjmKHa/cFlHAg=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",

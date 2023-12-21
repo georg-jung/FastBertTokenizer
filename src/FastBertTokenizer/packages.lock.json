@@ -20,15 +20,15 @@
       },
       "PolySharp": {
         "type": "Direct",
-        "requested": "[1.14.0, )",
-        "resolved": "1.14.0",
-        "contentHash": "3K6beiIeVO0hOlHCHv2jgGW7UH3OXsOIiEW60CHpqGvbrHyy4iQfGkCOBtI92PDCaA8XC4ZM3+02g2qenRnHOA=="
+        "requested": "[1.14.1, )",
+        "resolved": "1.14.1",
+        "contentHash": "mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
       },
       "StyleCop.Analyzers.Unstable": {
         "type": "Direct",
-        "requested": "[1.2.0.507, )",
-        "resolved": "1.2.0.507",
-        "contentHash": "gTY3IQdRqDJ4hbhSA3e/R48oE8b/OiKfvwkt1QdNVfrJK2gMHBV8ldaHJ885jxWZfllK66soa/sdcjh9bX49Tw=="
+        "requested": "[1.2.0.553, )",
+        "resolved": "1.2.0.553",
+        "contentHash": "kJA3HL54/oAsjQMYjmyiAaHisDtZl3f/r6638/mD6ct40o/IVDWk0NIK9kxkWZN3Qj1260Ut2cjmKHa/cFlHAg=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -60,15 +60,15 @@
       },
       "PolySharp": {
         "type": "Direct",
-        "requested": "[1.14.0, )",
-        "resolved": "1.14.0",
-        "contentHash": "3K6beiIeVO0hOlHCHv2jgGW7UH3OXsOIiEW60CHpqGvbrHyy4iQfGkCOBtI92PDCaA8XC4ZM3+02g2qenRnHOA=="
+        "requested": "[1.14.1, )",
+        "resolved": "1.14.1",
+        "contentHash": "mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
       },
       "StyleCop.Analyzers.Unstable": {
         "type": "Direct",
-        "requested": "[1.2.0.507, )",
-        "resolved": "1.2.0.507",
-        "contentHash": "gTY3IQdRqDJ4hbhSA3e/R48oE8b/OiKfvwkt1QdNVfrJK2gMHBV8ldaHJ885jxWZfllK66soa/sdcjh9bX49Tw=="
+        "requested": "[1.2.0.553, )",
+        "resolved": "1.2.0.553",
+        "contentHash": "kJA3HL54/oAsjQMYjmyiAaHisDtZl3f/r6638/mD6ct40o/IVDWk0NIK9kxkWZN3Qj1260Ut2cjmKHa/cFlHAg=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
