@@ -8,7 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <GlobalPackageReference Include="Nerdbank.GitVersioning" Version="3.6.133" />
-    <GlobalPackageReference Include="StyleCop.Analyzers.Unstable" Version="1.2.0.553" />
+    <GlobalPackageReference Include="StyleCop.Analyzers.Unstable" Version="1.2.0.556" />
   </ItemGroup>
   <ItemGroup>
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
