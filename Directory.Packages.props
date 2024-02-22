@@ -19,7 +19,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
-    <PackageVersion Include="LiteDB" Version="5.0.17" />
+    <PackageVersion Include="LiteDB" Version="5.0.19" />
     <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.17.0" />
     <PackageVersion Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.17.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
