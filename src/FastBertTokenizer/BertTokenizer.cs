@@ -5,6 +5,7 @@
 using System.Collections.Frozen;
 #endif
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Threading.Channels;
@@ -80,6 +81,7 @@ public partial class BertTokenizer
     }
 
     /// <summary>
+    /// Attention, this is an experimental API that might break in the future.
     /// Create an enumerable that can be used to enumerate batches of tokenized inputs. Provide a source enumerable that yields
     /// inputs that should be tokenized, e.g. from a database. This source enumerable is just enumerated as needed. If an input is longer
     /// than your model allows for a single input - specify this in <paramref name="tokensPerInput"/> - it will be split into multiple
@@ -102,11 +104,14 @@ public partial class BertTokenizer
     /// E.g. if your content is 1234, your max input size is 2 and stride is 1, you get 12, 23, 34 as inputs.
     /// </param>
     /// <returns>An <see cref="IAsyncEnumerable{T}"/> which yields tokenized batches for processing by e.g. an AI model.</returns>
+    [Experimental("FBERTTOK001")]
     public IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsyncBatchEnumerator<TKey>(IAsyncEnumerable<(TKey Key, string Content)> sourceEnumerable, int tokensPerInput, int batchSize, int stride)
     {
         return AsyncBatchEnumerator<TKey>.CreateAsync(this, sourceEnumerable, tokensPerInput, batchSize, stride);
     }
 
+    /// <inheritdoc cref="CreateAsyncBatchEnumerator{TKey}(IAsyncEnumerable{ValueTuple{TKey, string}}, int, int, int)"/>
+    [Experimental("FBERTTOK001")]
     public IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsyncBatchEnumerator<TKey>(ChannelReader<(TKey Key, string Content)> sourceChannel, int tokensPerInput, int batchSize, int stride, int? maxDegreeOfParallelism = null)
     {
         return new ParallelBatchEnumerator<TKey>(
@@ -116,6 +121,7 @@ public partial class BertTokenizer
 
     /// <returns>An <see cref="IEnumerable{T}"/> which yields tokenized batches for processing by e.g. an AI model.</returns>
     /// <inheritdoc cref="CreateAsyncBatchEnumerator{TKey}(IAsyncEnumerable{ValueTuple{TKey, string}}, int, int, int)"/>
+    [Experimental("FBERTTOK001")]
     public IEnumerable<TokenizedBatch<TKey>> CreateBatchEnumerator<TKey>(IEnumerable<(TKey Key, string Content)> sourceEnumerable, int tokensPerInput, int batchSize, int stride)
     {
         return AsyncBatchEnumerator<TKey>.CreateSync(this, sourceEnumerable, tokensPerInput, batchSize, stride);
@@ -148,6 +154,7 @@ public partial class BertTokenizer
             _tokenTypeIdsReturnBuffer.AsMemory(0, inputIdCnt));
     }
 
+    [Experimental("FBERTTOK001")]
     internal (TokenizedRange<TKey> TokenizedRange, int NonPaddingLen) EncodeBatchElement<TKey>(
         TKey inputKey,
         string input,

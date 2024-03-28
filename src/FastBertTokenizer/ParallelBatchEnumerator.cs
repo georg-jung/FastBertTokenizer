@@ -1,8 +1,11 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace FastBertTokenizer;
 
+[Experimental("FBERTTOK001")]
 internal class ParallelBatchEnumerator<TKey>
     : IAsyncEnumerator<TokenizedBatch<TKey>>, IAsyncEnumerable<TokenizedBatch<TKey>>
 {

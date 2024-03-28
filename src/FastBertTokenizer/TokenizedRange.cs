@@ -1,6 +1,8 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace FastBertTokenizer;
 
 /// <summary>
@@ -13,6 +15,7 @@ namespace FastBertTokenizer;
 /// Null, if the remaining input was fully tokenized. The index of the first char of the word that was cut off otherwise.
 /// This could be the offset value for the next tokenized range.
 /// </param>
+[Experimental("FBERTTOK001")]
 public record struct TokenizedRange<TKey>(TKey Key, int Offset, int? LastTokenizedWordStartIndex)
 {
 }

@@ -7,6 +7,8 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+
+    <NoWarn>FBERTTOK001</NoWarn> <!-- Experimental FastBertTokenizer features -->
   </PropertyGroup>
 
   <ItemGroup>

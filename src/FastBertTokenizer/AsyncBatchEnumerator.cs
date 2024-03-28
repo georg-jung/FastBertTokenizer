@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 
 namespace FastBertTokenizer;
 
+[Experimental("FBERTTOK001")]
 internal class AsyncBatchEnumerator<TKey>
 {
     private readonly BertTokenizer _tokenizer;
@@ -157,8 +159,13 @@ internal class AsyncBatchEnumerator<TKey>
     }
 }
 
+/// <summary>
+/// Attention, this is an experimental API that might break in the future.
+/// </summary>
+/// <typeparam name="TKey">A user-defined key type that identifies the tokenized input.</typeparam>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Reviewed.")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:File may only contain a single type", Justification = "Reviewed.")]
+[Experimental("FBERTTOK001")]
 public class TokenizedBatch<TKey>
 {
     public Memory<long> InputIds { get; internal set; }
