@@ -4,7 +4,7 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-#if !NETFRAMEWORK
+#if NET8_0_OR_GREATER
 using System.Runtime.InteropServices.Marshalling;
 
 [assembly:ExcludeFromCodeCoverage]
@@ -75,7 +75,7 @@ public static partial class RustTokenizer
         }
     }
 
-#if !NETFRAMEWORK
+#if NET8_0_OR_GREATER
     internal static partial class NativeMethods
     {
         [LibraryImport("tokenize")]

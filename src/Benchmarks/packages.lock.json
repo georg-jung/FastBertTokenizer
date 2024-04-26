@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net7.0": {
+    "net6.0": {
       "BenchmarkDotNet": {
         "type": "Direct",
         "requested": "[0.13.12, )",
@@ -35,12 +35,6 @@
         "requested": "[1.2.0, )",
         "resolved": "1.2.0",
         "contentHash": "g9sA7AIvzc0lzt1JZ4XLsus67lKHcxRqYqIWCrVs/80WRLJMxeRVyGFps4ZHE4Qan1JeyKZOB5pzBvtL2SM9dQ=="
-      },
-      "FastBertTokenizer": {
-        "type": "Direct",
-        "requested": "[0.4.8-beta, )",
-        "resolved": "0.4.8-beta",
-        "contentHash": "QdNJRgW8kcibrla/o3G2Bn6UJb+7JuJF3/H1baxUL17dkwQtCEr88geUnjrxbrJ6nVwq+Xgnb1SMjDC0mEturw=="
       },
       "Nerdbank.GitVersioning": {
         "type": "Direct",
@@ -291,6 +285,9 @@
         "type": "Transitive",
         "resolved": "4.5.4",
         "contentHash": "zteT+G8xuGu6mS+mzDzYXbzS7rd3K6Fjb9RiZlYlJPam2/hU7JCBZBVEcywNuR+oZ1ncTvc/cq0faRr3P01OVg=="
+      },
+      "fastberttokenizer": {
+        "type": "Project"
       },
       "rustlibwrapper": {
         "type": "Project"
