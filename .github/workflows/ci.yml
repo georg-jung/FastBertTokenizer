@@ -40,18 +40,6 @@ jobs:
     - run: cargo build --release
       working-directory: src/HuggingfaceTokenizer/RustLib
 
-    # Remove the html head with the logo from README for nupkg
-    - id: clean-readme
-      uses: sean0x42/markdown-extract@v2
-      with:
-        file: README.md
-        pattern: 'FastBertTokenizer'
-    - uses: "DamianReeves/write-file-action@master"
-      with:
-        path: README.md
-        write-mode: overwrite
-        contents: ${{ steps.clean-readme.outputs.markdown }}
-
     - run: dotnet restore /p:ContinuousIntegrationBuild=true
     - run: dotnet build -c Release --no-restore /p:ContinuousIntegrationBuild=true
 

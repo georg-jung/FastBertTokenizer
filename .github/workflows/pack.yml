@@ -1,0 +1,55 @@
+name: Pack
+
+on:
+  workflow_call:
+    inputs:
+      build-ref:
+        required: true
+        type: string
+  workflow_dispatch:
+  push:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+        lfs: true
+    - uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+    - uses: dotnet/nbgv@v0.4
+      id: nbgv
+
+    # Remove the html head with the logo from README for nupkg
+    - id: clean-readme
+      uses: sean0x42/markdown-extract@v2
+      with:
+        file: README.md
+        pattern: 'FastBertTokenizer'
+    - uses: "DamianReeves/write-file-action@master"
+      with:
+        path: README.md
+        write-mode: overwrite
+        contents: ${{ steps.clean-readme.outputs.markdown }}
+
+    - run: dotnet restore src/FastBertTokenizer/FastBertTokenizer.csproj /p:ContinuousIntegrationBuild=true
+    - run: dotnet build src/FastBertTokenizer/FastBertTokenizer.csproj -c Release --no-restore /p:ContinuousIntegrationBuild=true
+
+    - run: dotnet pack src/FastBertTokenizer/FastBertTokenizer.csproj -c Release --no-restore --no-build /p:ContinuousIntegrationBuild=true
+    - uses: actions/upload-artifact@v4
+      with:
+        name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.Version }}
+        path: bin/Packages/Release/**/*
