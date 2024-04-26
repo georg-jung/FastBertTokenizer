@@ -76,7 +76,11 @@ public partial class BertTokenizer
         using var cde = new CountdownEvent(ranges.Length);
         foreach (var range in ranges)
         {
+#if NETSTANDARD2_0
+            ThreadPool.QueueUserWorkItem(ParallelBodyObj, (range.Item1, range.Item2));
+#else
             ThreadPool.QueueUserWorkItem(ParallelBody, (range.Item1, range.Item2), false);
+#endif
         }
 
         cde.Wait();
@@ -95,5 +99,12 @@ public partial class BertTokenizer
 
             cde.Signal();
         }
+
+#if NETSTANDARD2_0
+        void ParallelBodyObj(object param)
+        {
+            ParallelBody(((int, int))param);
+        }
+#endif
     }
 }

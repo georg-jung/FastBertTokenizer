@@ -8,7 +8,9 @@ using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
+#if !NETSTANDARD2_0
 using System.Threading.Channels;
+#endif
 
 namespace FastBertTokenizer;
 
@@ -110,6 +112,7 @@ public partial class BertTokenizer
         return AsyncBatchEnumerator<TKey>.CreateAsync(this, sourceEnumerable, tokensPerInput, batchSize, stride);
     }
 
+#if !NETSTANDARD2_0
     /// <inheritdoc cref="CreateAsyncBatchEnumerator{TKey}(IAsyncEnumerable{ValueTuple{TKey, string}}, int, int, int)"/>
     [Experimental("FBERTTOK001")]
     public IAsyncEnumerable<TokenizedBatch<TKey>> CreateAsyncBatchEnumerator<TKey>(ChannelReader<(TKey Key, string Content)> sourceChannel, int tokensPerInput, int batchSize, int stride, int? maxDegreeOfParallelism = null)
@@ -118,6 +121,7 @@ public partial class BertTokenizer
             maxDegreeOfParallelism ?? Environment.ProcessorCount,
             () => AsyncBatchEnumerator<TKey>.CreateAsync(this, sourceChannel.ReadAllAsync(), tokensPerInput, batchSize, stride).GetAsyncEnumerator());
     }
+#endif
 
     /// <returns>An <see cref="IEnumerable{T}"/> which yields tokenized batches for processing by e.g. an AI model.</returns>
     /// <inheritdoc cref="CreateAsyncBatchEnumerator{TKey}(IAsyncEnumerable{ValueTuple{TKey, string}}, int, int, int)"/>
@@ -142,12 +146,21 @@ public partial class BertTokenizer
             _inputIdReturnBuffer = new long[maximumTokens];
             _attentionMaskReturnBuffer = new long[maximumTokens];
             _tokenTypeIdsReturnBuffer = new long[maximumTokens];
+#if !NETSTANDARD2_0
             Array.Fill(_tokenTypeIdsReturnBuffer, 0);
+#else
+            _tokenTypeIdsReturnBuffer.AsSpan().Clear();
+#endif
         }
 
         var (inputIdCnt, nonPaddedCnt) = Encode(input, 0, _inputIdReturnBuffer, out var _, padTo);
+#if !NETSTANDARD2_0
         Array.Fill(_attentionMaskReturnBuffer!, 1, 0, nonPaddedCnt);
         Array.Fill(_attentionMaskReturnBuffer!, 0, nonPaddedCnt, inputIdCnt - nonPaddedCnt);
+#else
+        _attentionMaskReturnBuffer.AsSpan(0, nonPaddedCnt).Fill(1);
+        _attentionMaskReturnBuffer.AsSpan(nonPaddedCnt, inputIdCnt - nonPaddedCnt).Fill(0);
+#endif
         return (
             _inputIdReturnBuffer.AsMemory(0, inputIdCnt),
             _attentionMaskReturnBuffer.AsMemory(0, inputIdCnt),
@@ -275,9 +288,10 @@ public partial class BertTokenizer
     /// <param name="text">Text to remove special unicode chars from.</param>
     /// <param name="cleaned">Contains the cleaned text.</param>
     /// <returns>True if characters were removed.</returns>
+#if !NETSTANDARD2_0
     private static bool RemoveControlAndReplacement(ReadOnlySpan<char> text, out ReadOnlySpan<char> cleaned)
     {
-        bool NeedsRemoval(ReadOnlySpan<char> text)
+        static bool NeedsRemoval(ReadOnlySpan<char> text)
         {
             foreach (Rune r in text.EnumerateRunes())
             {
@@ -341,6 +355,97 @@ public partial class BertTokenizer
         cleaned = span.Slice(0, i);
         return true;
     }
+#else
+    private static bool RemoveControlAndReplacement(ReadOnlySpan<char> text, out ReadOnlySpan<char> cleaned)
+    {
+        static bool NeedsRemoval(ReadOnlySpan<char> text)
+        {
+            for (var i = 0; i < text.Length; i++)
+            {
+                var c = text[i];
+                if (c == 0xFFFD)
+                {
+                    return true;
+                }
+
+                var cat = CharUnicodeInfo.GetUnicodeCategory(c); // char.GetUnicodeCategory(c); returns wrong values for some chars on netframework
+                if (i < text.Length - 1 && cat == UnicodeCategory.Surrogate)
+                {
+                    var str = text.Slice(i, 2).ToString();
+                    i++;
+                    cat = CharUnicodeInfo.GetUnicodeCategory(str, 0);
+                }
+
+                switch (cat)
+                {
+                    case UnicodeCategory.Control:
+                    case UnicodeCategory.Format:
+                    case UnicodeCategory.Surrogate:
+                    case UnicodeCategory.PrivateUse:
+                    case UnicodeCategory.OtherNotAssigned:
+                        return true;
+                    default:
+                        break;
+                }
+            }
+
+            return false;
+        }
+
+        if (!NeedsRemoval(text))
+        {
+            cleaned = text;
+            return false;
+        }
+
+        int iTarget = 0;
+        var charArray = new char[text.Length];
+
+        for (var iSource = 0; iSource < text.Length; iSource++)
+        {
+            var c = text[iSource];
+            if (c == 0xFFFD)
+            {
+                continue;
+            }
+
+            var cat = CharUnicodeInfo.GetUnicodeCategory(c); // char.GetUnicodeCategory(c); returns wrong values for some chars on netframework
+            var twoChars = false;
+            if (iSource < text.Length - 1 && cat == UnicodeCategory.Surrogate)
+            {
+                var str = text.Slice(iSource, 2).ToString();
+                iSource++;
+                cat = CharUnicodeInfo.GetUnicodeCategory(str, 0);
+                twoChars = true;
+            }
+
+            switch (cat)
+            {
+                case UnicodeCategory.Control:
+                case UnicodeCategory.Format:
+                case UnicodeCategory.Surrogate:
+                case UnicodeCategory.PrivateUse:
+                case UnicodeCategory.OtherNotAssigned:
+                    break;
+                default:
+                    if (!twoChars)
+                    {
+                        charArray[iTarget++] = c;
+                    }
+                    else
+                    {
+                        charArray[iTarget++] = c;
+                        charArray[iTarget++] = text[iSource];
+                    }
+
+                    break;
+            }
+        }
+
+        cleaned = charArray.AsSpan().Slice(0, iTarget);
+        return true;
+    }
+#endif
 
     /// <summary>
     /// Source: https://stackoverflow.com/a/67190157/1200847.
@@ -365,7 +470,7 @@ public partial class BertTokenizer
             return false;
         }
 
-        ReadOnlySpan<char> normalizedString = text.Normalize(NormalizationForm.FormD);
+        ReadOnlySpan<char> normalizedString = text.Normalize(NormalizationForm.FormD).AsSpan();
 
         if (!NeedsRemoval(normalizedString))
         {
@@ -392,7 +497,7 @@ public partial class BertTokenizer
             }
         }
 
-        return new string(span.Slice(0, i)).Normalize(targetNf);
+        return span.Slice(0, i).ToString().Normalize(targetNf);
     }
 
     private int TokenizeSubword(ReadOnlySpan<char> word, Span<long> tokenIdSink, ref int offset)
@@ -417,11 +522,11 @@ public partial class BertTokenizer
             var wordStr = word.ToString();
             if (!wordStr.IsNormalized(_normalization))
             {
-                return TokenizeSubword(wordStr.Normalize(_normalization), tokenIdSink, ref offset);
+                return TokenizeSubword(wordStr.Normalize(_normalization).AsSpan(), tokenIdSink, ref offset);
             }
 
             var withoutDiacrit = RemoveDiacritics(wordStr, _normalization);
-            if (!MemoryExtensions.Equals(withoutDiacrit, word, StringComparison.Ordinal))
+            if (!MemoryExtensions.Equals(withoutDiacrit.AsSpan(), word, StringComparison.Ordinal))
             {
                 return TokenizeSubword(withoutDiacrit.AsSpan(), tokenIdSink, ref offset);
             }
@@ -439,7 +544,7 @@ public partial class BertTokenizer
         // ToDo: Remove string allocation; related: https://github.com/dotnet/runtime/issues/27229
         while (prefix.Length > 0)
         {
-            if (_prefixes!.TryGetValue(new string(prefix), out var outId))
+            if (_prefixes!.TryGetValue(prefix.ToString(), out var outId))
             {
                 id = outId;
                 break;
@@ -466,7 +571,7 @@ public partial class BertTokenizer
             // ToDo: Remove string allocation; related: https://github.com/dotnet/runtime/issues/27229
             while (suffix.Length > 0)
             {
-                if (_suffixes!.TryGetValue(new string(suffix), out var outId))
+                if (_suffixes!.TryGetValue(suffix.ToString(), out var outId))
                 {
                     id = outId;
                     break;

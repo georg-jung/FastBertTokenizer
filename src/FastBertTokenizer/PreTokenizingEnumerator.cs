@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -157,7 +158,16 @@ internal ref struct PreTokenizingEnumerator
             return true;
         }
 
+#if NETSTANDARD
+        // inpired by / taken from source of modern .net
+        static bool IsBetween(UnicodeCategory c, UnicodeCategory min, UnicodeCategory max) =>
+            (uint)(c - min) <= (uint)(max - min);
+
+        // char.GetUnicodeCategory(c); returns wrong values for some chars on netframework
+        return IsBetween(CharUnicodeInfo.GetUnicodeCategory(cp), UnicodeCategory.ConnectorPunctuation, UnicodeCategory.OtherPunctuation);
+#else
         return char.IsPunctuation(cp);
+#endif
     }
 
     /// <summary>

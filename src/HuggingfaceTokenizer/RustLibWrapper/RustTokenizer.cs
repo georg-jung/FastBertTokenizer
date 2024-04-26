@@ -4,12 +4,15 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+#if !NETFRAMEWORK
 using System.Runtime.InteropServices.Marshalling;
 
 [assembly:ExcludeFromCodeCoverage]
+#endif
 
 namespace RustLibWrapper;
 
+[ExcludeFromCodeCoverage]
 public static partial class RustTokenizer
 {
     private static long[]? _inputIds = null;
@@ -72,6 +75,7 @@ public static partial class RustTokenizer
         }
     }
 
+#if !NETFRAMEWORK
     internal static partial class NativeMethods
     {
         [LibraryImport("tokenize")]
@@ -91,4 +95,25 @@ public static partial class RustTokenizer
             uint* attentionMask,
             int attentionMaskLen);
     }
+#else
+    internal static partial class NativeMethods
+    {
+        // DllImport attribute to import functions from the tokenizer library
+        [DllImport("tokenize", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool load_tokenizer(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string tokenizerPath,
+            int sequenceLength);
+
+        // DllImport attribute for tokenization and getting IDs
+        [DllImport("tokenize", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern unsafe bool tokenize_and_get_ids(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string inputUtf8,
+            uint* ids,
+            int idsLen,
+            uint* attentionMask,
+            int attentionMaskLen);
+    }
+#endif
 }

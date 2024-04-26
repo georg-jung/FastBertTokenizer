@@ -78,6 +78,7 @@ public class LoadTokenizer
         await tokenizer.LoadVocabularyAsync("data/invalid/minimal.txt", true);
     }
 
+#if !NETFRAMEWORK
     [Theory]
     [InlineData("bert-base-uncased")]
     public async Task LoadFromHuggingFace(string huggingFaceRepo)
@@ -85,6 +86,7 @@ public class LoadTokenizer
         var tokenizer = new BertTokenizer();
         await tokenizer.LoadFromHuggingFaceAsync(huggingFaceRepo);
     }
+#endif
 
     [Fact]
     public async Task PreventLoadAfterLoad()

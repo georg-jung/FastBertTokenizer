@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace FastBertTokenizer.Tests;
 
+#if !NETFRAMEWORK
 public class RestBaaiBgeTokenizer
 {
     private readonly string _requestUri;
@@ -50,3 +51,4 @@ public class RestBaaiBgeTokenizer
     {
     }
 }
+#endif

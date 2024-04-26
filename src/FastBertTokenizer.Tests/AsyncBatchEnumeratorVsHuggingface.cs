@@ -136,6 +136,12 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
                         {
                             continue;
                         }
+#if NETFRAMEWORK
+                        else if (DidWeSkipSomethingWhereHuggingFaceEmittedUnk(huggF.InputIds.Span, currentInputIds.Span))
+                        {
+                            continue;
+                        }
+#endif
 
                         var needsToMatchUpToIdx = currentInputIds.Length - 1;
 
@@ -305,5 +311,42 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
         return
             (iHF == huggF.Length && iOurs == ours.Length)
             || (iHF + cases == iOurs && iOurs == ours.Length);
+    }
+
+    // Did Hugging Face emitt one ore more [UNK] where we just skipped something?
+    // This is relevant for .netframework, probably due to it's outdated unicode data.
+    private bool DidWeSkipSomethingWhereHuggingFaceEmittedUnk(ReadOnlySpan<long> huggF, ReadOnlySpan<long> ours)
+    {
+        var skippedHfUnk = 0;
+        var (iHF, iOurs) = (0, 0);
+        while (iHF < huggF.Length && iOurs < ours.Length)
+        {
+            if (huggF[iHF] == ours[iOurs])
+            {
+                iHF++;
+                iOurs++;
+                continue;
+            }
+
+            // [SEP] == 102
+            // Hugging face will be at the end earlier if it emitted [UNK] where we skipped something.
+            if (skippedHfUnk > 0 && huggF[iHF] == 102)
+            {
+                iOurs++;
+                break;
+            }
+
+            // [UNK] == 100
+            // Skip [UNK]s in Hugging Face's result
+            while (iHF < huggF.Length && huggF[iHF] == 100)
+            {
+                skippedHfUnk++;
+                iHF++;
+            }
+        }
+
+        return
+            (iHF == huggF.Length && iOurs == ours.Length)
+            || (iHF == huggF.Length && iOurs == ours.Length - skippedHfUnk);
     }
 }

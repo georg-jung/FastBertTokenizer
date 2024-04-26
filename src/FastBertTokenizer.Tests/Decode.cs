@@ -47,7 +47,7 @@ public class Decode : IAsyncLifetime
         var decoded = _uut.Decode(loremIpsum);
         decoded.ShouldStartWith("[CLS] lorem ipsum");
 
-        long[] startsWithSuffix = loremIpsum[2..];
+        long[] startsWithSuffix = loremIpsum.AsSpan(2).ToArray();
         decoded = _uut.Decode(startsWithSuffix);
         decoded.ShouldStartWith("m ipsum");
     }

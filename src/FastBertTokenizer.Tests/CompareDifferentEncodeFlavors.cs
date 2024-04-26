@@ -90,7 +90,12 @@ public class CompareDifferentEncodeFlavors : IAsyncLifetime
 
         channel.Writer.TryComplete().ShouldBeTrue();
 
-        await foreach (var batch in _uut.CreateAsyncBatchEnumerator(channel.Reader, 512, 100, stride: 0))
+#if NETFRAMEWORK
+        var asyncEnum = channel.Reader.AsAsyncEnumerable();
+#else
+        var asyncEnum = channel.Reader;
+#endif
+        await foreach (var batch in _uut.CreateAsyncBatchEnumerator(asyncEnum, 512, 100, stride: 0))
         {
             for (var idx = 0; idx < batch.OutputCorrelation.Length; idx++)
             {
@@ -140,7 +145,12 @@ public class CompareDifferentEncodeFlavors : IAsyncLifetime
 
         channel2.Writer.TryComplete().ShouldBeTrue();
 
-        await foreach (var batch in _uut.CreateAsyncBatchEnumerator(channel2.Reader, 512, 100, stride: 27))
+#if NETFRAMEWORK
+        var asyncEnum2 = channel.Reader.AsAsyncEnumerable();
+#else
+        var asyncEnum2 = channel.Reader;
+#endif
+        await foreach (var batch in _uut.CreateAsyncBatchEnumerator(asyncEnum2, 512, 100, stride: 27))
         {
             for (var idx = 0; idx < batch.OutputCorrelation.Length; idx++)
             {

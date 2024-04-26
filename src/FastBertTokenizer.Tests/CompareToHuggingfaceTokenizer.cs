@@ -99,6 +99,15 @@ namespace FastBertTokenizer.Tests
                 return;
             }
 
+#if NETFRAMEWORK
+            if (id == 19308)
+            {
+                // 19308 "Mali" contains surrogate characters. .NET Framework unicode-categorizes them as "other, not assigned" and thus
+                // They get removed instead emitting an [UNK]. The difference is probably due to newer a unicode version used by huggingface & modern .NET.
+                return;
+            }
+#endif
+
             var huggF = RustTokenizer.TokenizeAndGetIds(content, 512);
             var ours = _uut.Encode(content, 512, 512);
             try

@@ -110,7 +110,7 @@ internal class AsyncBatchEnumerator<TKey>
         return i != 0;
     }
 
-    public ValueTask DisposeAsync() => _asyncSourceEnumerator?.DisposeAsync() ?? ValueTask.CompletedTask;
+    public ValueTask DisposeAsync() => _asyncSourceEnumerator?.DisposeAsync() ?? default;
 
     private sealed class AsyncEnumerable(AsyncBatchEnumerator<TKey> parent) :
         IAsyncEnumerator<TokenizedBatch<TKey>>,
