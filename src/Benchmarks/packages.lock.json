@@ -50,9 +50,9 @@
       },
       "SharpToken": {
         "type": "Direct",
-        "requested": "[1.2.14, )",
-        "resolved": "1.2.14",
-        "contentHash": "it+8r3xoLHBbNV7x7tfrD7uRI/W/RG/risF7T7+fGCSOao6nOvO9+HALF2NppJRBiJ5gspdaVvUKvFO0UGYs5w=="
+        "requested": "[2.0.2, )",
+        "resolved": "2.0.2",
+        "contentHash": "agF4GdYY9Zv2fdnK6uPUra6/WDg9hLd5bfeTLKNOfNanPFAeY5lSQjvmHYoUkZWEmNs7fzjDfAc5bDbqfuJfIA=="
       },
       "System.Interactive": {
         "type": "Direct",
