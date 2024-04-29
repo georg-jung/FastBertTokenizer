@@ -20,6 +20,9 @@ Fast and memory-efficient WordPiece tokenizer as it is used by BERT and others. 
     </PackageDescription>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>1.0.12-beta</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,7 +39,7 @@ Fast and memory-efficient WordPiece tokenizer as it is used by BERT and others. 
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.Memory" />
-    <PackageReference Include="System.Text.Json" />    
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
 </Project>
