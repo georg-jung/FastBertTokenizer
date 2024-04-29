@@ -12,7 +12,7 @@ fn main() {
         let duration = start.elapsed();
 
         println!("Iteration {:?} took: {:?}", i, duration);
-        if i == max {
+        if i == max - 1 {
             // Calculate the total number of token IDs produced
             let total_token_ids = encodings.iter().map(|e| e.get_ids().len()).sum::<usize>();
 
