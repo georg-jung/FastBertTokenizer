@@ -40,4 +40,6 @@ if ($actualWarningCount -ne $expectedWarningCount)
     Write-Host "Actual warning count:", actualWarningCount, "is not as expected. Expected warning count is:", $expectedWarningCount
 }
 
+Write-Host "Publish output:", $publishOutput
+
 Exit $testPassed
