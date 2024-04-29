@@ -332,16 +332,16 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
             // Hugging face will be at the end earlier if it emitted [UNK] where we skipped something.
             if (skippedHfUnk > 0 && huggF[iHF] == 102)
             {
-                iOurs++;
                 break;
             }
 
             // [UNK] == 100
             // Skip [UNK]s in Hugging Face's result
-            while (iHF < huggF.Length && huggF[iHF] == 100)
+            if (iHF < huggF.Length && huggF[iHF] == 100)
             {
                 skippedHfUnk++;
                 iHF++;
+                continue;
             }
 
             // The tokens were just different and that Hugging Face emitted [UNK] where we didn't was not the reason for that.
