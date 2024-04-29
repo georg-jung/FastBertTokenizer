@@ -14,11 +14,6 @@ namespace FastBertTokenizer;
 
 public partial class BertTokenizer
 {
-    private readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     /// <summary>
     /// Load a tokenizer.json file that contains a tokenizer configuration in the format used by Hugging Face libraries.
     /// Supports version 1.0 of the tokenizer.json format.
@@ -40,7 +35,7 @@ public partial class BertTokenizer
     /// <inheritdoc cref="LoadTokenizerJsonAsync(string)"/>
     public async Task LoadTokenizerJsonAsync(Stream tokenizerJsonStream)
     {
-        var tok = await JsonSerializer.DeserializeAsync<TokenizerJson>(tokenizerJsonStream, _jsonSerializerOptions)
+        var tok = await JsonSerializer.DeserializeAsync(tokenizerJsonStream, TokenizerJsonContext.Default.TokenizerJson)
             ?? throw new ArgumentException("Tokenizer configuration could not be deserialised.");
         LoadTokenizerJsonImpl(tok);
     }
@@ -48,7 +43,7 @@ public partial class BertTokenizer
     /// <inheritdoc cref="LoadTokenizerJson(Stream)"/>
     public void LoadTokenizerJson(Stream tokenizerJsonStream)
     {
-        var tok = JsonSerializer.Deserialize<TokenizerJson>(tokenizerJsonStream, _jsonSerializerOptions)
+        var tok = JsonSerializer.Deserialize(tokenizerJsonStream, TokenizerJsonContext.Default.TokenizerJson)
             ?? throw new ArgumentException("Tokenizer configuration could not be deserialised.");
         LoadTokenizerJsonImpl(tok);
     }
@@ -56,7 +51,7 @@ public partial class BertTokenizer
 #if !NETSTANDARD2_0
     internal async Task LoadTokenizerJsonAsync(HttpClient httpClient, string url)
     {
-        var tok = await httpClient.GetFromJsonAsync<TokenizerJson>(url, _jsonSerializerOptions)
+        var tok = await httpClient.GetFromJsonAsync(url, TokenizerJsonContext.Default.TokenizerJson)
             ?? throw new ArgumentException("Tokenizer configuration could not be deserialised.");
         LoadTokenizerJsonImpl(tok);
     }

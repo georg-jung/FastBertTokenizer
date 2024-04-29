@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <PublishAot>true</PublishAot>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <SelfContained>true</SelfContained>
+    <NoWarn>FBERTTOK001</NoWarn> <!-- Experimental FastBertTokenizer features -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <TrimmerRootAssembly Include="FastBertTokenizer" />
+    <ProjectReference Include="../FastBertTokenizer/FastBertTokenizer.csproj" />
+  </ItemGroup>
+
+</Project>
