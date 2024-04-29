@@ -343,6 +343,9 @@ public class AsyncBatchEnumeratorVsHuggingface : IAsyncLifetime
                 skippedHfUnk++;
                 iHF++;
             }
+
+            // The tokens were just different and that Hugging Face emitted [UNK] where we didn't was not the reason for that.
+            break;
         }
 
         return
