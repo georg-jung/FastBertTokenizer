@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+
+    <NoWarn>FBERTTOK001</NoWarn> <!-- Experimental FastBertTokenizer features -->
   </PropertyGroup>
 
   <PropertyGroup>
