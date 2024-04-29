@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
 using BERTTokenizers.Base;
+using FastBertTokenizer;
 using RustLibWrapper;
 
 namespace Benchmarks;
@@ -19,6 +20,7 @@ public class OtherLibs
     private ConcreteUncasedTokenizer _nmZivkovicTokenizer;
     private string[] _corpus = null!;
     private List<string> _nmZivkovicCorpus = null!;
+    private readonly BertTokenizer _tokenizer = new();
 
     public OtherLibs()
         : this("data/wiki-simple.json.br", "data/baai-bge-small-en/vocab.txt", "data/baai-bge-small-en/tokenizer.json", 512)
@@ -38,6 +40,7 @@ public class OtherLibs
     public async Task SetupAsync()
     {
         RustTokenizer.LoadTokenizer(_tokenizerJsonPath, _maxSequenceLength);
+        await _tokenizer.LoadTokenizerJsonAsync(_tokenizerJsonPath);
         _corpus = await CorpusReader.ReadBrotliJsonCorpusAsync(_corpusPath);
 
         _nmZivkovicCorpus = new(_corpus.Length);
@@ -65,6 +68,18 @@ public class OtherLibs
         foreach (var text in _nmZivkovicCorpus)
         {
             res.Add(_nmZivkovicTokenizer.Encode(_maxSequenceLength, text));
+        }
+
+        return res;
+    }
+
+    [Benchmark]
+    public IReadOnlyCollection<object> FastBertTokenizer_SameDataAsBertTokenizers()
+    {
+        List<object> res = new(_nmZivkovicCorpus.Count);
+        foreach (var text in _nmZivkovicCorpus)
+        {
+            res.Add(_tokenizer.Encode(text, _maxSequenceLength));
         }
 
         return res;
