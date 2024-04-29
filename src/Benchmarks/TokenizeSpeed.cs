@@ -53,7 +53,7 @@ public class TokenizeSpeed
         List<object> res = new(_corpus.Length);
         foreach (var text in _corpus)
         {
-            res.Add(_tokenizer.Tokenize(text, _maxSequenceLength));
+            res.Add(_tokenizer.Encode(text, _maxSequenceLength));
         }
 
         return res;
@@ -68,7 +68,7 @@ public class TokenizeSpeed
         Array.Fill(toktyp, 0);
         foreach (var text in _corpus)
         {
-            _tokenizer.Tokenize(text, iids, attm);
+            _tokenizer.Encode(text, iids, attm);
         }
 
         return (iids, attm, toktyp);
@@ -79,7 +79,7 @@ public class TokenizeSpeed
     {
         // This would produce wrong results because BertTokenizer is not thread-safe.
         List<(ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds)> res = new(_corpus.Length);
-        foreach(var x in _corpus.AsParallel().AsOrdered().Select(x => _tokenizer.Tokenize(x, _maxSequenceLength)))
+        foreach(var x in _corpus.AsParallel().AsOrdered().Select(x => _tokenizer.Encode(x, _maxSequenceLength)))
         {
             res.Add(x);
         }
@@ -103,7 +103,7 @@ public class TokenizeSpeed
             var batchSeqLen = _maxSequenceLength * len;
             var iidsM = iids.AsMemory(0, batchSeqLen);
             var attmM = attm.AsMemory(0, batchSeqLen);
-            _tokenizer.Tokenize(corpMem.Slice(i, len), iidsM, attmM, _maxSequenceLength);
+            _tokenizer.Encode(corpMem.Slice(i, len), iidsM, attmM, _maxSequenceLength);
         }
 
         return (iids.AsMemory(), attm.AsMemory(), toktyp.AsMemory());
@@ -119,7 +119,7 @@ public class TokenizeSpeed
         var toktyp = new long[_maxSequenceLength * batchSize];
         Array.Fill(toktyp, 0);
 
-        _tokenizer.Tokenize(corpMem, iids, attm, _maxSequenceLength);
+        _tokenizer.Encode(corpMem, iids, attm, _maxSequenceLength);
         return (iids.AsMemory(), attm.AsMemory(), toktyp.AsMemory());
     }
 
@@ -176,7 +176,7 @@ public class TokenizeSpeed
         {
             var baseJob = Job.Default;
             var localJob = baseJob.WithCustomBuildConfiguration("LocalBuild");
-            var nugetJob = baseJob.WithNuGet("FastBertTokenizer", "0.4.8-beta");
+            var nugetJob = baseJob.WithNuGet("FastBertTokenizer", "0.5.18-alpha");
             AddJob(localJob.WithRuntime(CoreRuntime.Core80));
             AddJob(localJob.WithRuntime(CoreRuntime.Core60));
             AddJob(nugetJob.WithRuntime(CoreRuntime.Core80));

@@ -69,7 +69,7 @@ public class CompareToSharpToken
         List<object> res = new(_corpus.Length);
         foreach (var text in _corpus)
         {
-            var (iid, attM, _) = _tokenizer.Tokenize(text, _maxSequenceLength);
+            var (iid, attM, _) = _tokenizer.Encode(text, _maxSequenceLength);
         }
         
         return res;
