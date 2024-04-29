@@ -66,8 +66,8 @@ public partial class BertTokenizer
             throw new InvalidOperationException("Vocabulary already loaded.");
         }
 
-        var prefixes = new Dictionary<string, long>(StringComparer.Ordinal);
-        var suffixes = new Dictionary<string, long>(StringComparer.Ordinal);
+        var prefixes = new Dictionary<StringSpanOrdinalKey, long>();
+        var suffixes = new Dictionary<StringSpanOrdinalKey, long>();
         (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
         var i = 0;
 
@@ -77,7 +77,7 @@ public partial class BertTokenizer
             {
                 if (line.StartsWith("##", StringComparison.Ordinal))
                 {
-                    suffixes[line[2..]] = i;
+                    suffixes[new StringSpanOrdinalKey(line[2..])] = i;
                 }
                 else if (line.Equals(unknownToken, StringComparison.Ordinal))
                 {
@@ -97,7 +97,7 @@ public partial class BertTokenizer
                 }
                 else
                 {
-                    prefixes[line] = i;
+                    prefixes[new StringSpanOrdinalKey(line)] = i;
                 }
             }
 

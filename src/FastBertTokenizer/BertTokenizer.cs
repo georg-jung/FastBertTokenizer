@@ -21,11 +21,11 @@ namespace FastBertTokenizer;
 public partial class BertTokenizer
 {
 #if NET8_0_OR_GREATER
-    private FrozenDictionary<string, long>? _prefixes;
-    private FrozenDictionary<string, long>? _suffixes;
+    private FrozenDictionary<StringSpanOrdinalKey, long>? _prefixes;
+    private FrozenDictionary<StringSpanOrdinalKey, long>? _suffixes;
 #else
-    private Dictionary<string, long>? _prefixes;
-    private Dictionary<string, long>? _suffixes;
+    private Dictionary<StringSpanOrdinalKey, long>? _prefixes;
+    private Dictionary<StringSpanOrdinalKey, long>? _suffixes;
 #endif
     private (int Id, string Token) _unk = default!;
     private (int Id, string Token) _cls = default!;
@@ -544,7 +544,7 @@ public partial class BertTokenizer
         // ToDo: Remove string allocation; related: https://github.com/dotnet/runtime/issues/27229
         while (prefix.Length > 0)
         {
-            if (_prefixes!.TryGetValue(prefix.ToString(), out var outId))
+            if (_prefixes!.TryGetValue(prefix, out var outId))
             {
                 id = outId;
                 break;
@@ -571,7 +571,7 @@ public partial class BertTokenizer
             // ToDo: Remove string allocation; related: https://github.com/dotnet/runtime/issues/27229
             while (suffix.Length > 0)
             {
-                if (_suffixes!.TryGetValue(suffix.ToString(), out var outId))
+                if (_suffixes!.TryGetValue(suffix, out var outId))
                 {
                     id = outId;
                     break;
