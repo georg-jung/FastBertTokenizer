@@ -36,6 +36,12 @@
         "resolved": "1.2.0",
         "contentHash": "g9sA7AIvzc0lzt1JZ4XLsus67lKHcxRqYqIWCrVs/80WRLJMxeRVyGFps4ZHE4Qan1JeyKZOB5pzBvtL2SM9dQ=="
       },
+      "FastBertTokenizer": {
+        "type": "Direct",
+        "requested": "[0.5.18-alpha, )",
+        "resolved": "0.5.18-alpha",
+        "contentHash": "0t5/tsakZRfOf6rK6bvkTEx5ODegW/yUq1XuUapvdNo+yx67Yog0uc2KXAqSeB4jftA09EVDGQLgEK0qcIQU2w=="
+      },
       "Nerdbank.GitVersioning": {
         "type": "Direct",
         "requested": "[3.6.133, )",
@@ -285,9 +291,6 @@
         "type": "Transitive",
         "resolved": "4.5.4",
         "contentHash": "zteT+G8xuGu6mS+mzDzYXbzS7rd3K6Fjb9RiZlYlJPam2/hU7JCBZBVEcywNuR+oZ1ncTvc/cq0faRr3P01OVg=="
-      },
-      "fastberttokenizer": {
-        "type": "Project"
       },
       "rustlibwrapper": {
         "type": "Project"
