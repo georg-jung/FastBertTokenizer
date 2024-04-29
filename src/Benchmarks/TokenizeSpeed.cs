@@ -177,10 +177,13 @@ public class TokenizeSpeed
             var baseJob = Job.Default;
             var localJob = baseJob.WithCustomBuildConfiguration("LocalBuild");
             var nugetJob = baseJob.WithNuGet("FastBertTokenizer", "0.5.18-alpha");
+            var nugetJob2 = baseJob.WithNuGet("FastBertTokenizer", "1.0.12-beta");
             AddJob(localJob.WithRuntime(CoreRuntime.Core80));
             AddJob(localJob.WithRuntime(CoreRuntime.Core60));
             AddJob(nugetJob.WithRuntime(CoreRuntime.Core80));
             AddJob(nugetJob.WithRuntime(CoreRuntime.Core60));
+            AddJob(nugetJob2.WithRuntime(CoreRuntime.Core80));
+            AddJob(nugetJob2.WithRuntime(CoreRuntime.Core60));
         }
     }
 }
