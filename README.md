@@ -107,8 +107,8 @@ This isn't an apples to apples comparison as BPE (what SharpToken does) and Word
 
 I'm not really experienced in benchmarking rust code, but my attempts using criterion.rs (see `src/HuggingfaceTokenizer/BenchRust`) suggest that it takes tokenizers around
 
-* single threaded: ~2 s (~2.9m tokens/s)
-* batched/multi threaded: ~10 s (~0.6m tokens/s)
+* batched/multi threaded: ~2 s (~2.9m tokens/s)
+* single threaded: ~10 s (~0.6m tokens/s)
 
 to produce 5,807,947 tokens from the same 15k simple english wikipedia articles. Contrary to what one might expect, this does mean that FastBertTokenizer, beeing a managed implementation, outperforms tokenizers. It should be noted though that tokenizers has a much more complete feature set while FastBertTokenizer is specifically optimized for WordPiece/Bert encoding.
 
