@@ -7,7 +7,7 @@
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
-    <GlobalPackageReference Include="Nerdbank.GitVersioning" Version="3.6.133" />
+    <GlobalPackageReference Include="Nerdbank.GitVersioning" Version="3.6.146" />
     <GlobalPackageReference Include="StyleCop.Analyzers.Unstable" Version="1.2.0.556" />
   </ItemGroup>
   <ItemGroup>
@@ -15,23 +15,24 @@
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
-    <PackageVersion Include="GitHubActionsTestLogger" Version="2.3.3">
+    <PackageVersion Include="FastBertTokenizer" Version="1.0.12-beta" />
+    <PackageVersion Include="GitHubActionsTestLogger" Version="2.4.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
-    <PackageVersion Include="LiteDB" Version="5.0.19" />
-    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.17.3" />
-    <PackageVersion Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.17.3" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-    <PackageVersion Include="PolySharp" Version="1.14.1" />
+    <PackageVersion Include="LiteDB" Version="5.0.21" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.20.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="PolySharp" Version="1.15.0" />
     <PackageVersion Include="Shouldly" Version="4.2.1" />
     <PackageVersion Include="SimpleSIMD" Version="4.6.0" />
-    <PackageVersion Include="System.Memory" Version="4.5.5" />
-    <PackageVersion Include="System.Text.Json" Version="8.0.3" />
+    <PackageVersion Include="System.Memory" Version="4.6.0" />
+    <PackageVersion Include="System.Text.Json" Version="8.0.5" />
     <PackageVersion Include="System.Threading.Channels" Version="8.0.0" />
-    <PackageVersion Include="Verify.Xunit" Version="24.1.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.8" />
-    <PackageVersion Include="xunit" Version="2.7.1" />
+    <PackageVersion Include="Verify.Xunit" Version="28.3.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.4.13" />
   </ItemGroup>
 </Project>
