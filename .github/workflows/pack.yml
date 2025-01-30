@@ -7,7 +7,15 @@ on:
         required: true
         type: string
   workflow_dispatch:
+    inputs:
+      docs:
+        description: "Set to 'yes' to deploy docfx to GitHub Pages."
+        required: false
+        default: "no"
   push:
+  # Deploy automatically on a new release, automatically publishes docfx to GitHub Pages
+  release:
+    types: [published]
 
 env:
   DOTNET_NOLOGO: true
@@ -19,6 +27,11 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
+
+    # Expose the docs version as a job-level output
+    outputs:
+      doc_version: ${{ steps.nbgv.outputs.AssemblyInformationalVersion }}
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -65,3 +78,42 @@ jobs:
       with:
         name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.AssemblyInformationalVersion }}
         path: bin/Packages/Release/**/*
+
+  #########################################################################
+  # DEPLOY Docs Job (runs only if release event OR if "docs: yes" manually)
+  #########################################################################
+  deploy-docs:
+    # Condition:
+    #   1) if it's a RELEASE event, OR
+    #   2) if it's a manual dispatch with docs == 'yes'
+    # Otherwise, skip
+    if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.docs == 'yes') }}
+
+    name: Deploy docfx to GitHub Pages
+    runs-on: ubuntu-22.04
+    needs: build
+
+    # Pages deployment requires these permissions
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Download docs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: FastBertTokenizer-docs-${{ needs.build.outputs.doc_version }}
+          path: docs
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
