@@ -30,6 +30,10 @@ jobs:
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: global.json
     - uses: dotnet/nbgv@v0.4
       id: nbgv
 
