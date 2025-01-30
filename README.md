@@ -1,5 +1,5 @@
-<p align="center">
-  <a href="https://www.nuget.org/packages/FastBertTokenizer/" id="toplogo">
+<p align="center" id="toplogo">
+  <a href="https://www.nuget.org/packages/FastBertTokenizer/">
     <!-- https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#specifying-the-theme-an-image-is-shown-to -->
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="logo-darkmode.svg">
