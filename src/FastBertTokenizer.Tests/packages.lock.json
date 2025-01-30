@@ -658,11 +658,15 @@
       "fastberttokenizer": {
         "type": "Project",
         "dependencies": {
+          "System.Memory": "[4.6.0, )",
           "System.Text.Json": "[8.0.5, )"
         }
       },
       "rustlibwrapper": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "System.Memory": "[4.6.0, )"
+        }
       },
       "System.Memory": {
         "type": "CentralTransitive",
