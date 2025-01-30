@@ -37,6 +37,17 @@ jobs:
     - uses: dotnet/nbgv@v0.4
       id: nbgv
 
+    - run: dotnet restore src/FastBertTokenizer/FastBertTokenizer.csproj /p:ContinuousIntegrationBuild=true
+    - run: dotnet tool install -g docfx
+    - run: docfx docfx/docfx.json
+    - uses: actions/upload-artifact@v4
+      with:
+        name: FastBertTokenizer-docs-${{ steps.nbgv.outputs.AssemblyInformationalVersion }}
+        path: docfx/_site/**/*
+
+    # To be sure we don't pack the docfx build, this comes after docfx
+    - run: dotnet build src/FastBertTokenizer/FastBertTokenizer.csproj -c Release --no-restore /p:ContinuousIntegrationBuild=true
+
     # Remove the html head with the logo from README for nupkg
     - id: clean-readme
       uses: sean0x42/markdown-extract@v2
@@ -49,11 +60,8 @@ jobs:
         write-mode: overwrite
         contents: ${{ steps.clean-readme.outputs.markdown }}
 
-    - run: dotnet restore src/FastBertTokenizer/FastBertTokenizer.csproj /p:ContinuousIntegrationBuild=true
-    - run: dotnet build src/FastBertTokenizer/FastBertTokenizer.csproj -c Release --no-restore /p:ContinuousIntegrationBuild=true
-
     - run: dotnet pack src/FastBertTokenizer/FastBertTokenizer.csproj -c Release --no-restore --no-build /p:ContinuousIntegrationBuild=true
     - uses: actions/upload-artifact@v4
       with:
-        name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.Version }}
+        name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.AssemblyInformationalVersion }}
         path: bin/Packages/Release/**/*
