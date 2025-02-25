@@ -150,6 +150,7 @@ public partial class BertTokenizer
 #endif
             _lowercaseInput = convertInputToLowercase;
             _normalization = normalization;
+            _addedTokens = new([(unknownToken, false), (clsToken, false), (sepToken, false), (padToken, false)]);
         }
     }
 }

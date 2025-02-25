@@ -16,14 +16,7 @@ public partial class BertTokenizer
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
 
         _decodeSuffixes ??= _suffixes.ToDictionary(x => x.Value, x => x.Key.ToString());
-        if (_decodePrefixes is null)
-        {
-            _decodePrefixes = _prefixes.ToDictionary(x => x.Value, x => x.Key.ToString());
-            _decodePrefixes.Add(_unk.Id, _unk.Token);
-            _decodePrefixes.Add(_cls.Id, _cls.Token);
-            _decodePrefixes.Add(_sep.Id, _sep.Token);
-            _decodePrefixes.Add(_pad.Id, _pad.Token);
-        }
+        _decodePrefixes ??= _prefixes.ToDictionary(x => x.Value, x => x.Key.ToString());
 
         if (tokenIds.Length == 0)
         {

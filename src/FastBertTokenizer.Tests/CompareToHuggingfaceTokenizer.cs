@@ -147,15 +147,21 @@ namespace FastBertTokenizer.Tests
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:File may only contain a single type", Justification = "<Ausstehend>")]
     public class CompareToHuggingfaceTokenizerBertBaseUncased : CompareToHuggingfaceTokenizer
     {
         public CompareToHuggingfaceTokenizerBertBaseUncased()
-            : base("data/bert-base-uncased/tokenizer.json") { }
+            : base("data/bert-base-uncased/tokenizer.json")
+        {
+        }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:File may only contain a single type", Justification = "<Ausstehend>")]
     public class CompareToHuggingfaceTokenizerWithAddedTokens : CompareToHuggingfaceTokenizer
     {
         public CompareToHuggingfaceTokenizerWithAddedTokens()
-            : base("data/issue-100/tokenizer.json") { }
+            : base("data/issue-100/tokenizer.json")
+        {
+        }
     }
 }

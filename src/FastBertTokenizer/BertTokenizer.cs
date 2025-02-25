@@ -33,6 +33,7 @@ public partial class BertTokenizer
     private (int Id, string Token) _pad = default!;
     private bool _lowercaseInput;
     private NormalizationForm _normalization;
+    private AddedTokens _addedTokens = default!;
 
     // These will just be used if the consumer calls an API that _returns_ ReadOnlyMemory.
     // They will be reused for subsequent calls to avoid allocations.
@@ -212,7 +213,7 @@ public partial class BertTokenizer
 
         lastTokenizedWordStartIndex = 0;
         bool moreRemainingInput = false;
-        foreach (var pivot in new PreTokenizingEnumerator(input, _lowercaseInput, _normalization, inputOffset))
+        foreach (var pivot in new PreTokenizingEnumerator(input, _lowercaseInput, _normalization, _addedTokens, inputOffset))
         {
             lastTokenizedWordStartIndex = pivot.SegmentStartIndex;
             var offset = 0;

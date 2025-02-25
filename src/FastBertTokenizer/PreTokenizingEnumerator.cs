@@ -13,11 +13,12 @@ internal ref struct PreTokenizingEnumerator
     private readonly bool _convertToLowercase;
     private readonly int _inputOffset;
     private readonly ReadOnlySpan<char> _input;
+    private readonly AddedTokens _addedTokens;
     private int start;
     private int currentIndex;
     private char[]? buffer = null;
 
-    public PreTokenizingEnumerator(string input, bool convertToLowercase, NormalizationForm vocabNf, int inputOffset = 0)
+    public PreTokenizingEnumerator(string input, bool convertToLowercase, NormalizationForm vocabNf, AddedTokens addedTokens, int inputOffset = 0)
     {
         // The BertTokenizer itself will try normalizing the string if it can not find a matching token id in the vocabulary.
         // If the vocabulary uses FormD and our input is in FormC, we will not find a matching token id for the input as the composed
@@ -36,6 +37,7 @@ internal ref struct PreTokenizingEnumerator
         }
 
         _convertToLowercase = convertToLowercase;
+        _addedTokens = addedTokens;
         _inputOffset = inputOffset;
         start = -1;
         currentIndex = 0;
@@ -47,7 +49,7 @@ internal ref struct PreTokenizingEnumerator
 
     public PreTokenizerResult Current { get; private set; }
 
-    public PreTokenizingEnumerator GetEnumerator() => this;
+    public readonly PreTokenizingEnumerator GetEnumerator() => this;
 
     public bool MoveNext()
     {
@@ -55,7 +57,18 @@ internal ref struct PreTokenizingEnumerator
         {
             var c = _input[currentIndex];
 
-            if (char.IsWhiteSpace(c))
+            if (_addedTokens.FirstLetters.Contains(c) && StartsWithAddedToken(_input.Slice(currentIndex)) is (int len, bool normalize))
+            {
+                if (Flush())
+                {
+                    return true;
+                }
+
+                SetCurrent(_input.Slice(currentIndex, len), currentIndex, normalize);
+                currentIndex += len;
+                return true;
+            }
+            else if (char.IsWhiteSpace(c))
             {
                 if (Flush())
                 {
@@ -104,20 +117,7 @@ internal ref struct PreTokenizingEnumerator
         if (start != -1)
         {
             var toProcess = _input.Slice(start, currentIndex - start);
-            if (_convertToLowercase)
-            {
-                int lowerLen;
-                while ((lowerLen = toProcess.ToLowerInvariant(buffer)) == -1)
-                {
-                    ExpandBuffer();
-                }
-
-                Current = new() { Segment = buffer.AsSpan(0, lowerLen), SegmentStartIndex = start + _inputOffset };
-            }
-            else
-            {
-                Current = new() { Segment = toProcess, SegmentStartIndex = start + _inputOffset };
-            }
+            SetCurrent(toProcess, start, true);
 
             start = -1;
             return true;
@@ -136,6 +136,37 @@ internal ref struct PreTokenizingEnumerator
         var newLen = buffer!.Length * 2;
         ArrayPool<char>.Shared.Return(buffer);
         buffer = ArrayPool<char>.Shared.Rent(newLen);
+    }
+
+    private void SetCurrent(ReadOnlySpan<char> toProcess, int currentStartIdx, bool canLowercase)
+    {
+        if (_convertToLowercase && canLowercase)
+        {
+            int lowerLen;
+            while ((lowerLen = toProcess.ToLowerInvariant(buffer)) == -1)
+            {
+                ExpandBuffer();
+            }
+
+            Current = new() { Segment = buffer.AsSpan(0, lowerLen), SegmentStartIndex = currentStartIdx + _inputOffset };
+        }
+        else
+        {
+            Current = new() { Segment = toProcess, SegmentStartIndex = currentStartIdx + _inputOffset };
+        }
+    }
+
+    private readonly (int Length, bool Normalize)? StartsWithAddedToken(ReadOnlySpan<char> value)
+    {
+        foreach (var (content, normalize) in _addedTokens.Tokens)
+        {
+            if (value.StartsWith(content.AsSpan()))
+            {
+                return (content.Length, normalize);
+            }
+        }
+
+        return null;
     }
 
     // AggressiveInlining the methods below does seem to provide a performance boost in the 2-6% ballpark of the overall tokenizer.

@@ -104,7 +104,6 @@ public partial class BertTokenizer
 
         var suffixPrefix = tok.Model.ContinuingSubwordPrefix; // e.g. "##"
         var normalization = NormalizationForm.FormD; // bert uses FormD per default
-        var addedTokens = new HashSet<string>(tok.AddedTokens.Select(t => t.Content), StringComparer.Ordinal);
         var clsSpecialToken = tok.PostProcessor.SpecialTokens["[CLS]"];
         var sepSpecialToken = tok.PostProcessor.SpecialTokens["[SEP]"];
         var unkToken = tok.Model.UnkToken;
@@ -118,39 +117,56 @@ public partial class BertTokenizer
 
         void HandleLine(string line, int tokenId)
         {
-            if (!string.IsNullOrEmpty(line))
+            if (string.IsNullOrEmpty(line))
             {
-                if (line.StartsWith(suffixPrefix, StringComparison.Ordinal))
-                {
-                    suffixes[new(line[suffixPrefix.Length..])] = tokenId;
-                }
-                else if (line.Equals(unkToken, StringComparison.Ordinal))
-                {
-                    unkId = tokenId;
-                }
-                else if (line.Equals(clsToken, StringComparison.Ordinal))
-                {
-                    clsId = tokenId;
-                }
-                else if (line.Equals(sepToken, StringComparison.Ordinal))
-                {
-                    sepId = tokenId;
-                }
-                else if (line.Equals(padToken, StringComparison.Ordinal))
-                {
-                    padId = tokenId;
-                }
-                else
-                {
-                    prefixes[new(line)] = tokenId;
-                }
+                return;
             }
+
+            if (line.StartsWith(suffixPrefix, StringComparison.Ordinal))
+            {
+                suffixes[new(line[suffixPrefix.Length..])] = tokenId;
+                return;
+            }
+
+            if (line.Equals(unkToken, StringComparison.Ordinal))
+            {
+                unkId = tokenId;
+            }
+            else if (line.Equals(clsToken, StringComparison.Ordinal))
+            {
+                clsId = tokenId;
+            }
+            else if (line.Equals(sepToken, StringComparison.Ordinal))
+            {
+                sepId = tokenId;
+            }
+            else if (line.Equals(padToken, StringComparison.Ordinal))
+            {
+                padId = tokenId;
+            }
+
+            prefixes[new(line)] = tokenId;
         }
 
         foreach (var (token, id) in tok.Model.Vocab)
         {
             HandleLine(token, id);
         }
+
+        foreach (var addedToken in tok.AddedTokens)
+        {
+            // We ignore LStrip and RStrip as FastBertTokenizer always pre-tokenizes on whitespace,
+            // true and false would result in the same behavior.
+            if (addedToken.SingleWord)
+            {
+                throw new ArgumentException($"FastBertTokenizer only supports added tokens with single_word=false. The given tokenizer.json does however contain an added token {addedToken.Content} = {addedToken.Id} with single_word = true.");
+            }
+
+            // This does not seem to be required in all cases, e.g. [CLS] with bert-base-uncased, but required in others, e.g. 21.22 with issue #100 tokenizer.
+            prefixes[new(addedToken.Content)] = addedToken.Id;
+        }
+
+        _addedTokens = new(tok.AddedTokens.Select(x => (x.Content, x.Normalized)));
 
 #if NET8_0_OR_GREATER
         _prefixes = prefixes.ToFrozenDictionary();

@@ -25,11 +25,21 @@ internal record TokenizerJson
 
     public required ModelSection Model { get; init; }
 
+    // https://huggingface.co/docs/tokenizers/python/latest/api/reference.html#tokenizers.AddedToken
     internal record AddedToken
     {
         public required int Id { get; init; }
 
         public required string Content { get; init; }
+
+        [JsonPropertyName("single_word")]
+        public bool SingleWord { get; init; }
+
+        public bool LStrip { get; init; }
+
+        public bool RStrip { get; init; }
+
+        public bool Normalized { get; init; }
     }
 
     internal record NormalizerSection
