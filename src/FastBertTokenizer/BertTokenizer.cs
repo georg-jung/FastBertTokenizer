@@ -32,6 +32,7 @@ public partial class BertTokenizer
     private (int Id, string Token) _sep = default!;
     private (int Id, string Token) _pad = default!;
     private bool _lowercaseInput;
+    private bool _stripAccents = true;
     private NormalizationForm _normalization;
     private AddedTokens _addedTokens = default!;
 
@@ -526,10 +527,13 @@ public partial class BertTokenizer
                 return TokenizeSubword(wordStr.Normalize(_normalization).AsSpan(), tokenIdSink, ref offset);
             }
 
-            var withoutDiacrit = RemoveDiacritics(wordStr, _normalization);
-            if (!MemoryExtensions.Equals(withoutDiacrit.AsSpan(), word, StringComparison.Ordinal))
+            if (_stripAccents)
             {
-                return TokenizeSubword(withoutDiacrit.AsSpan(), tokenIdSink, ref offset);
+                var withoutDiacrit = RemoveDiacritics(wordStr, _normalization);
+                if (!MemoryExtensions.Equals(withoutDiacrit.AsSpan(), word, StringComparison.Ordinal))
+                {
+                    return TokenizeSubword(withoutDiacrit.AsSpan(), tokenIdSink, ref offset);
+                }
             }
 
             tokenIdSink[0] = _unk.Id;

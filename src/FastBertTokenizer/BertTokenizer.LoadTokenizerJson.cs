@@ -91,12 +91,6 @@ public partial class BertTokenizer
             throw new ArgumentException("The confiuguration specifies Normalizer.HandleChineseChars = false, but currently only HandleChineseChars = true is supported.");
         }
 
-        if (tok.Normalizer.StripAccents is false)
-        {
-            throw new ArgumentException("The confiuguration specifies Normalizer.StripAccents = false, but FastBertTokenizer uses an automatic mode that first tries " +
-                "to tokenize inputs as-is and tries to remove any accents if the as-is input could not be tokenized using the vocabulary.");
-        }
-
         if (tok.Normalizer.CleanText is false)
         {
             throw new ArgumentException("The confiuguration specifies Normalizer.CleanText = false, but currently only CleanText = true is supported.");
@@ -176,6 +170,10 @@ public partial class BertTokenizer
         _suffixes = suffixes;
 #endif
         _lowercaseInput = tok.Normalizer.Lowercase;
+
+        // https://huggingface.co/docs/tokenizers/python/latest/api/reference.html#module-tokenizers.normalizers
+        // strip_accents (bool, optional) – Whether to strip all accents. If this option is not specified (ie == None), then it will be determined by the value for lowercase (as in the original Bert).
+        _stripAccents = tok.Normalizer.StripAccents ?? _lowercaseInput;
         _normalization = normalization;
         _unk = (unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unkToken}."), unkToken);
         _cls = (clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}."), clsToken);
