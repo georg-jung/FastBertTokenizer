@@ -52,7 +52,7 @@
   "normalizer": {
     "type": "BertNormalizer",
     "clean_text": true,
-    "handle_chinese_chars": false,
+    "handle_chinese_chars": true,
     "strip_accents": null,
     "lowercase": true
   },

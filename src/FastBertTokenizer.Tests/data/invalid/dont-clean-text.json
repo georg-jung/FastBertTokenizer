@@ -145,7 +145,11 @@
     "continuing_subword_prefix": "##",
     "max_input_chars_per_word": 100,
     "vocab": {
-      "[PAD]": 0
+      "[PAD]": 0,
+      "[UNK]": 100,
+      "[CLS]": 101,
+      "[SEP]": 102,
+      "[MASK]": 103
     }
   }
 }

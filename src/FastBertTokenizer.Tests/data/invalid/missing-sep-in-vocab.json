@@ -52,8 +52,8 @@
   "normalizer": {
     "type": "BertNormalizer",
     "clean_text": true,
-    "handle_chinese_chars": false,
-    "strip_accents": null,
+    "handle_chinese_chars": true,
+    "strip_accents": false,
     "lowercase": true
   },
   "pre_tokenizer": {
@@ -148,7 +148,6 @@
       "[PAD]": 0,
       "[UNK]": 100,
       "[CLS]": 101,
-      "[SEP]": 102,
       "[MASK]": 103
     }
   }

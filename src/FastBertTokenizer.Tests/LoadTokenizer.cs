@@ -58,7 +58,6 @@ public class LoadTokenizer
     [InlineData("data/invalid/wrong-model-type.json")]
     [InlineData("data/invalid/wrong-normalizer.json")]
     [InlineData("data/invalid/wrong-pretokenizer.json")]
-    [InlineData("data/invalid/dont-strip-accents.json")]
     [InlineData("data/invalid/dont-handle-chinese-chars.json")]
     [InlineData("data/invalid/dont-clean-text.json")]
     public async Task LoadTokenizerFromInvalidJsonAsync(string path)
@@ -75,7 +74,20 @@ public class LoadTokenizer
         await Should.ThrowAsync<InvalidOperationException>(tokenizer.LoadVocabularyAsync("data/invalid/no-sep.txt", true));
         await Should.ThrowAsync<InvalidOperationException>(tokenizer.LoadVocabularyAsync("data/invalid/no-pad.txt", true));
         await Should.ThrowAsync<InvalidOperationException>(tokenizer.LoadVocabularyAsync("data/invalid/no-unk.txt", true));
-        await tokenizer.LoadVocabularyAsync("data/invalid/minimal.txt", true);
+        await Should.ThrowAsync<InvalidOperationException>(tokenizer.LoadTokenizerJsonAsync("data/invalid/missing-sep-in-vocab.json"));
+    }
+
+    [Fact]
+    public async Task LoadMinimalSuccessfullTokenizersAsync()
+    {
+        var tokenizer = new BertTokenizer();
+        await tokenizer.LoadVocabularyAsync("data/minimal.txt", true);
+
+        tokenizer = new BertTokenizer();
+        await tokenizer.LoadTokenizerJsonAsync("data/minimal.json");
+
+        tokenizer = new BertTokenizer();
+        await tokenizer.LoadTokenizerJsonAsync("data/dont-strip-accents.json");
     }
 
 #if !NETFRAMEWORK
