@@ -27,6 +27,15 @@ namespace FastBertTokenizer.Tests
         public Task DisposeAsync() => Task.CompletedTask;
 
         [Theory]
+        [InlineData("Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam.")]
+        [InlineData("This is an [UNK] example, that [SEP] contains some special tokens [CLS] in the input [PAD] that will be encoded according to vocabulary.")]
+        [InlineData("In this [UNK] other [unk] example[pAd], [c ls] special tokens [sep] also [Pad] app[CLS]ear in unusal [ PAD] casing.[PAD]")]
+        public void CompareSomeCraftedExampleStrings(string value)
+        {
+            CompareImpl(null, value);
+        }
+
+        [Theory]
         [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
         public void CompareSimpleWikipediaCorpusAsIs(Dictionary<int, string> articles)
         {
@@ -93,7 +102,7 @@ namespace FastBertTokenizer.Tests
             return dic;
         }
 
-        private void CompareImpl(int id, string content)
+        private void CompareImpl(int? id, string content)
         {
             if (id == 6309 || id == 30153 || id == 60246)
             {
@@ -124,6 +133,11 @@ namespace FastBertTokenizer.Tests
             }
             catch (Exception ex)
             {
+#if NETFRAMEWORK
+                id ??= content.GetHashCode();
+#else
+                id ??= content.GetHashCode(StringComparison.Ordinal);
+#endif
                 File.WriteAllText($"unequal_tokenization_pair_huggf_{id}.json", JsonSerializer.Serialize(
                     new { dec = _uut.Decode(huggF.InputIds.Span), input_ids = huggF.InputIds.ToArray(), attm = huggF.AttentionMask.ToArray(), toktyp = huggF.TokenTypeIds.ToArray() }));
                 File.WriteAllText($"unequal_tokenization_pair_ours_{id}.json", JsonSerializer.Serialize(
