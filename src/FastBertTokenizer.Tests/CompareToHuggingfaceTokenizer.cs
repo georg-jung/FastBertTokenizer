@@ -8,14 +8,20 @@ using Shouldly;
 namespace FastBertTokenizer.Tests
 {
     [Collection("UsesRustLib")]
-    public class CompareToHuggingfaceTokenizer : IAsyncLifetime
+    public abstract class CompareToHuggingfaceTokenizer : IAsyncLifetime
     {
         private readonly BertTokenizer _uut = new();
+        private readonly string _tokenizerJsonPath;
+
+        protected CompareToHuggingfaceTokenizer(string tokenizerJsonPath)
+        {
+            _tokenizerJsonPath = tokenizerJsonPath;
+        }
 
         public async Task InitializeAsync()
         {
-            await _uut.LoadTokenizerJsonAsync("data/bert-base-uncased/tokenizer.json");
-            RustTokenizer.LoadTokenizer("data/bert-base-uncased/tokenizer.json", 512);
+            await _uut.LoadTokenizerJsonAsync(_tokenizerJsonPath);
+            RustTokenizer.LoadTokenizer(_tokenizerJsonPath, 512);
         }
 
         public Task DisposeAsync() => Task.CompletedTask;
@@ -125,5 +131,17 @@ namespace FastBertTokenizer.Tests
                 throw new ShouldAssertException($"Assertion failed for article {id}:\n{ex.Message}", ex);
             }
         }
+    }
+
+    public class CompareToHuggingfaceTokenizerBertBaseUncased : CompareToHuggingfaceTokenizer
+    {
+        public CompareToHuggingfaceTokenizerBertBaseUncased()
+            : base("data/bert-base-uncased/tokenizer.json") { }
+    }
+
+    public class CompareToHuggingfaceTokenizerWithAddedTokens : CompareToHuggingfaceTokenizer
+    {
+        public CompareToHuggingfaceTokenizerWithAddedTokens()
+            : base("data/issue-100/tokenizer.json") { }
     }
 }
