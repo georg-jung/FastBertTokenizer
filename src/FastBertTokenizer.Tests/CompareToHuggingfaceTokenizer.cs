@@ -156,6 +156,11 @@ namespace FastBertTokenizer.Tests
         }
     }
 
+    // While these tests run & funciton fine in principile, they would fail.
+    // The issue #100 tokenizer is instead tested in AsyncBatchEnumeratorVsHuggingFace.cs, which checks
+    // for a lot of slight differences that we want to allow. This test here does not have that detailed
+    // handling of the differences. It can help in debugging though.
+    /*
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:File may only contain a single type", Justification = "<Ausstehend>")]
     public class CompareToHuggingfaceTokenizerWithAddedTokens : CompareToHuggingfaceTokenizer
     {
@@ -164,4 +169,5 @@ namespace FastBertTokenizer.Tests
         {
         }
     }
+    */
 }
