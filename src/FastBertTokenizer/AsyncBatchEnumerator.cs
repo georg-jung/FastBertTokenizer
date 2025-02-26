@@ -147,7 +147,7 @@ internal class AsyncBatchEnumerator<TKey>
             var vt = parent.MoveNextAsync();
             if (!vt.IsCompletedSuccessfully)
             {
-                throw new NotImplementedException();
+                throw new NotImplementedException(); // UnreachableException is only available in .NET 7+
             }
             else
             {
@@ -155,7 +155,7 @@ internal class AsyncBatchEnumerator<TKey>
             }
         }
 
-        public void Reset() => throw new InvalidOperationException("Multiple enumeration is not supported.");
+        public void Reset() => throw new NotSupportedException("Multiple enumeration is not supported.");
     }
 }
 

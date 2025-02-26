@@ -36,6 +36,30 @@ public class BatchEnumerators : IAsyncLifetime
 
     [Theory]
     [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
+    public void TokenizeWithBatchEnumeratorNonGenericEnumerable(Dictionary<int, string> articles)
+    {
+        IEnumerable<(int, string)> Source()
+        {
+            foreach (var (key, value) in articles.Take(100)) // some data is sufficient here, as TokenizeWithBatchEnumerator already checks the same.
+            {
+                yield return (key, value);
+            }
+        }
+
+        var enumerable = (System.Collections.IEnumerable)_uut.CreateBatchEnumerator(Source(), 512, 10, 0);
+        foreach (var batch in enumerable)
+        {
+            var casted = (TokenizedBatch<int>)batch;
+            casted.InputIds.Span[0].ShouldBe(101); // [CLS] = 101
+        }
+
+        var anotherEnumerable = (System.Collections.IEnumerable)_uut.CreateBatchEnumerator(Source(), 512, 10, 0);
+        var enumerator = anotherEnumerable.GetEnumerator();
+        Should.Throw<NotSupportedException>(enumerator.Reset);
+    }
+
+    [Theory]
+    [MemberData(nameof(WikipediaSimpleData.GetArticlesDict), MemberType = typeof(WikipediaSimpleData))]
     public async Task TokenizeWithAsyncBatchEnumerator(Dictionary<int, string> articles)
     {
         async IAsyncEnumerable<(int, string)> Source()
