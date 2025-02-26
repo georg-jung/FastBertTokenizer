@@ -29,5 +29,5 @@ jobs:
 
     - uses: actions/upload-artifact@v4
       with:
-        name: criterion-reports-${{ steps.nbgv.outputs.Version }}
+        name: criterion-reports-${{ steps.nbgv.outputs.SemVer2 }}
         path: src/HuggingfaceTokenizer/BenchRust/target/criterion/**/*

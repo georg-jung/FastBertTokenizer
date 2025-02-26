@@ -68,5 +68,5 @@ jobs:
     - run: dotnet pack -c Release --no-restore --no-build /p:ContinuousIntegrationBuild=true
     - uses: actions/upload-artifact@v4
       with:
-        name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.Version }}
+        name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.SemVer2 }}
         path: bin/Packages/Release/**/*

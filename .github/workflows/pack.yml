@@ -30,7 +30,7 @@ jobs:
 
     # Expose the docs version as a job-level output
     outputs:
-      doc_version: ${{ steps.nbgv.outputs.AssemblyInformationalVersion }}
+      doc_version: ${{ steps.nbgv.outputs.SemVer2 }}
 
     steps:
     - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
     - run: docfx docfx/docfx.json
     - uses: actions/upload-artifact@v4
       with:
-        name: FastBertTokenizer-docs-${{ steps.nbgv.outputs.AssemblyInformationalVersion }}
+        name: FastBertTokenizer-docs-${{ steps.nbgv.outputs.SemVer2 }}
         path: docfx/_site/**/*
 
     # To be sure we don't pack the docfx build, this comes after docfx
@@ -76,7 +76,7 @@ jobs:
     - run: dotnet pack src/FastBertTokenizer/FastBertTokenizer.csproj -c Release --no-restore --no-build /p:ContinuousIntegrationBuild=true
     - uses: actions/upload-artifact@v4
       with:
-        name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.AssemblyInformationalVersion }}
+        name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.SemVer2 }}
         path: bin/Packages/Release/**/*
 
   #########################################################################
