@@ -60,6 +60,7 @@ public class LoadTokenizer
     [InlineData("data/invalid/wrong-pretokenizer.json")]
     [InlineData("data/invalid/dont-handle-chinese-chars.json")]
     [InlineData("data/invalid/dont-clean-text.json")]
+    [InlineData("data/invalid/with-single-word-added-token.json")]
     public async Task LoadTokenizerFromInvalidJsonAsync(string path)
     {
         var tokenizer = new BertTokenizer();
@@ -88,6 +89,9 @@ public class LoadTokenizer
 
         tokenizer = new BertTokenizer();
         await tokenizer.LoadTokenizerJsonAsync("data/dont-strip-accents.json");
+
+        tokenizer = new BertTokenizer();
+        await tokenizer.LoadTokenizerJsonAsync("data/with-empty-token.json");
     }
 
 #if !NETFRAMEWORK
