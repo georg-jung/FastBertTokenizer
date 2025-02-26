@@ -53,9 +53,9 @@ internal class AsyncBatchEnumerator<TKey>
         return new AsyncEnumerable(impl);
     }
 
-    public static IEnumerable<TokenizedBatch<TKey>> CreateSync(BertTokenizer tokenizer, IEnumerable<(TKey Key, string Content)> asyncSourceEnumerable, int tokensPerInput, int batchSize, int stride)
+    public static IEnumerable<TokenizedBatch<TKey>> CreateSync(BertTokenizer tokenizer, IEnumerable<(TKey Key, string Content)> sourceEnumerable, int tokensPerInput, int batchSize, int stride)
     {
-        var impl = new AsyncBatchEnumerator<TKey>(tokenizer, asyncSourceEnumerable, tokensPerInput, batchSize, stride);
+        var impl = new AsyncBatchEnumerator<TKey>(tokenizer, sourceEnumerable, tokensPerInput, batchSize, stride);
         return new SyncEnumerable(impl);
     }
 
