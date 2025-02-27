@@ -158,15 +158,20 @@ internal ref struct PreTokenizingEnumerator
 
     private readonly (int Length, bool Normalize)? StartsWithAddedToken(ReadOnlySpan<char> value)
     {
+        (int Length, bool Normalize)? maxMatch = null;
+
         foreach (var (content, normalize) in _addedTokens.Tokens)
         {
             if (value.StartsWith(content.AsSpan()))
             {
-                return (content.Length, normalize);
+                if (maxMatch == null || content.Length > maxMatch.Value.Length)
+                {
+                    maxMatch = (content.Length, normalize);
+                }
             }
         }
 
-        return null;
+        return maxMatch;
     }
 
     // AggressiveInlining the methods below does seem to provide a performance boost in the 2-6% ballpark of the overall tokenizer.
