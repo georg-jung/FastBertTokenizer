@@ -191,6 +191,7 @@ namespace FastBertTokenizer.Tests
         [InlineData("This is an [UNK] example, that [SEP] contains some special tokens [CLS] in the input [PAD] that will be encoded according to vocabulary.")]
         [InlineData("In this [UNK] other [unk] example[pAd], [c ls] special tokens [sep] also [Pad] app[CLS]ear in unusal [ PAD] casing.[PAD]")]
         [InlineData("a abcd bcd abcd cd ab asdf AB ABCD CD A D CD X AbCd")]
+        [InlineData("[pAd]")]
         public void CompareSomeCraftedExampleStrings(string value)
         {
             CompareImpl(null, value);

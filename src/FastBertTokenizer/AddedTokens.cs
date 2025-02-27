@@ -10,10 +10,18 @@ internal class AddedTokens
     public AddedTokens(IEnumerable<(string Content, bool Normalize)> addedTokens)
     {
         Tokens = [.. addedTokens];
+
+        // This logic might not be perfect. Are there chars that are equal to others in an invariant case insesitive comparison
+        // but are neither the upper nor the lower variant of the original?
+        var firstLettersToSearch = addedTokens
+            .SelectMany(x => x.Normalize
+                ? (IEnumerable<char>)[x.Content[0], char.ToLowerInvariant(x.Content[0]), char.ToUpperInvariant(x.Content[0])]
+                : [x.Content[0]])
+            .Distinct();
 #if NET8_0_OR_GREATER
-        FirstLetters = SearchValues.Create([.. addedTokens.Select(x => x.Content[0])]);
+        FirstLetters = SearchValues.Create([.. firstLettersToSearch]);
 #else
-        FirstLetters = [.. addedTokens.Select(x => x.Content[0])];
+        FirstLetters = [.. firstLettersToSearch];
 #endif
     }
 
