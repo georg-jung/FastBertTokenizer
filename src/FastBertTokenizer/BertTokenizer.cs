@@ -35,7 +35,6 @@ public partial class BertTokenizer
     private bool _stripAccents = true;
     private NormalizationForm _normalization;
     private AddedTokens _addedTokens = default!;
-    private string _continuingSubwordPrefix = default!;
 
     // These will just be used if the consumer calls an API that _returns_ ReadOnlyMemory.
     // They will be reused for subsequent calls to avoid allocations.
