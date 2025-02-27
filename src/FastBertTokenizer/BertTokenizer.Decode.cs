@@ -31,6 +31,7 @@ public partial class BertTokenizer
         else
         {
             // Our decoded text does not start with a word start but in the middle of a word.
+            sb.Append("##");
             sb.Append(_decodeSuffixes[tokenIds[0]]);
         }
 
