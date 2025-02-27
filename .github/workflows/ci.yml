@@ -8,6 +8,9 @@ on:
         type: string
   workflow_dispatch:
   push:
+  pull_request:
+    paths-ignore:
+    - '**.md'
 
 env:
   DOTNET_NOLOGO: true

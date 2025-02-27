@@ -3,6 +3,9 @@ name: Benchmark
 on:
   workflow_dispatch:
   push:
+  pull_request:
+    paths-ignore:
+    - '**.md'
 
 env:
   DOTNET_NOLOGO: true
