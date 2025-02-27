@@ -160,7 +160,7 @@ internal ref struct PreTokenizingEnumerator
     {
         foreach (var (content, normalize) in _addedTokens.Tokens)
         {
-            if (value.StartsWith(content.AsSpan()))
+            if (value.StartsWith(content.AsSpan(), normalize ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return (content.Length, normalize);
             }
