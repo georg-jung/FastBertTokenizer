@@ -49,7 +49,7 @@ public class Decode : IAsyncLifetime
 
         long[] startsWithSuffix = loremIpsum.AsSpan(2).ToArray();
         decoded = _uut.Decode(startsWithSuffix);
-        decoded.ShouldStartWith("m ipsum");
+        decoded.ShouldStartWith("##m ipsum");
     }
 
     [Fact]
