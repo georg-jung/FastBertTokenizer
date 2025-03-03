@@ -25,6 +25,8 @@ internal record TokenizerJson
 
     public required ModelSection Model { get; init; }
 
+    public DecoderSection? Decoder { get; init; }
+
     // https://huggingface.co/docs/tokenizers/python/latest/api/reference.html#tokenizers.AddedToken
     internal record AddedToken
     {
@@ -90,5 +92,14 @@ internal record TokenizerJson
         public required string ContinuingSubwordPrefix { get; init; }
 
         public required Dictionary<string, int> Vocab { get; set; }
+    }
+
+    internal record DecoderSection
+    {
+        public string? Type { get; init; }
+
+        public string? Prefix { get; init; }
+
+        public bool? Cleanup { get; init; }
     }
 }

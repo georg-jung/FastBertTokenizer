@@ -11,6 +11,8 @@ namespace FastBertTokenizer;
 
 public partial class BertTokenizer
 {
+    private const string VocabTxtDefaultContinuingSubwordPrefix = "##";
+
     /// <summary>
     /// Load a vocab.txt file that assigns an id to each token based on the line number.
     /// </summary>
@@ -75,7 +77,7 @@ public partial class BertTokenizer
         {
             if (!string.IsNullOrEmpty(line))
             {
-                if (line.StartsWith("##", StringComparison.Ordinal))
+                if (line.StartsWith(VocabTxtDefaultContinuingSubwordPrefix, StringComparison.Ordinal))
                 {
                     suffixes[new StringSpanOrdinalKey(line[2..])] = i;
                 }
@@ -149,6 +151,7 @@ public partial class BertTokenizer
             _suffixes = suffixes;
 #endif
             _lowercaseInput = convertInputToLowercase;
+            _decoderPrefix = VocabTxtDefaultContinuingSubwordPrefix;
             _normalization = normalization;
             _addedTokens = new([(unknownToken, false), (clsToken, false), (sepToken, false), (padToken, false)]);
         }
