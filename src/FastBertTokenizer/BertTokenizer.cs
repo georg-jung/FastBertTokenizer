@@ -36,6 +36,7 @@ public partial class BertTokenizer
     private NormalizationForm _normalization;
     private AddedTokens _addedTokens = default!;
     private string _decoderPrefix = default!;
+    private bool _cleanupTokenizationSpaces = true;
 
     // These will just be used if the consumer calls an API that _returns_ ReadOnlyMemory.
     // They will be reused for subsequent calls to avoid allocations.

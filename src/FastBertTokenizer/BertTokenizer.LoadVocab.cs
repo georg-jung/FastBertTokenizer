@@ -28,34 +28,35 @@ public partial class BertTokenizer
     /// <param name="sepToken">Special token for sperator, e.g. [SEP].</param>
     /// <param name="padToken">Special token for padding, e.g. [PAD].</param>
     /// <param name="normalization">The unicode normalization form used by this vocabulary.</param>
+    /// <param name="cleanupTokenizationSpaces">Controls the cleanup and normalization of spaces after decoding tokens back into a string.</param>
     /// <returns>A task that represents the loading operation.</returns>
     /// <exception cref="ArgumentNullException">If one of the requred arguments is null.</exception>
     /// <exception cref="InvalidOperationException">If a vocabulary is already loaded OR if the vocabulary does not contain one of the specified special tokens.</exception>
-    public async Task LoadVocabularyAsync(string vocabTxtFilePath, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD)
+    public async Task LoadVocabularyAsync(string vocabTxtFilePath, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD, bool cleanupTokenizationSpaces = true)
     {
         using var sr = new StreamReader(vocabTxtFilePath);
-        await LoadVocabularyAsync(sr, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken, normalization)!;
+        await LoadVocabularyAsync(sr, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken, normalization, cleanupTokenizationSpaces)!;
     }
 
     // these are actually inherited
 #pragma warning disable CS1573 // Parameter besitzt kein übereinstimmendes param-Tag im XML-Kommentar (andere Parameter jedoch schon)
 
     /// <param name="vocabTxtFile">A text reader that provides the vocab.txt file.</param>
-    /// <inheritdoc cref="LoadVocabularyAsync(string, bool, string, string, string, string, NormalizationForm)"/>
-    public async Task LoadVocabularyAsync(TextReader vocabTxtFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD)
+    /// <inheritdoc cref="LoadVocabularyAsync(string, bool, string, string, string, string, NormalizationForm, bool)"/>
+    public async Task LoadVocabularyAsync(TextReader vocabTxtFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD, bool cleanupTokenizationSpaces = true)
     {
         await LoadVocabularyImpl(true, vocabTxtFile, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken, normalization)!;
     }
 
-    /// <inheritdoc cref="LoadVocabulary(TextReader, bool, string, string, string, string, NormalizationForm)"/>
-    public void LoadVocabulary(TextReader vocabTxtFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD)
+    /// <inheritdoc cref="LoadVocabulary(TextReader, bool, string, string, string, string, NormalizationForm, bool)"/>
+    public void LoadVocabulary(TextReader vocabTxtFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD, bool cleanupTokenizationSpaces = true)
     {
-        LoadVocabularyImpl(false, vocabTxtFile, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken, normalization);
+        LoadVocabularyImpl(false, vocabTxtFile, convertInputToLowercase, unknownToken, clsToken, sepToken, padToken, normalization, cleanupTokenizationSpaces);
     }
 
 #pragma warning restore CS1573 // Parameter besitzt kein übereinstimmendes param-Tag im XML-Kommentar (andere Parameter jedoch schon)
 
-    private Task? LoadVocabularyImpl(bool execAsync, TextReader vocabTxtFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD)
+    private Task? LoadVocabularyImpl(bool execAsync, TextReader vocabTxtFile, bool convertInputToLowercase, string unknownToken = "[UNK]", string clsToken = "[CLS]", string sepToken = "[SEP]", string padToken = "[PAD]", NormalizationForm normalization = NormalizationForm.FormD, bool cleanupTokenizationSpaces = true)
     {
         _ = vocabTxtFile ?? throw new ArgumentNullException(nameof(vocabTxtFile));
         _ = unknownToken ?? throw new ArgumentNullException(nameof(unknownToken));
@@ -154,6 +155,7 @@ public partial class BertTokenizer
             _decoderPrefix = VocabTxtDefaultContinuingSubwordPrefix;
             _normalization = normalization;
             _addedTokens = new([(unknownToken, false), (clsToken, false), (sepToken, false), (padToken, false)]);
+            _cleanupTokenizationSpaces = cleanupTokenizationSpaces;
         }
     }
 }
