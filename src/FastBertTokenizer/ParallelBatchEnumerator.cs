@@ -15,11 +15,9 @@ internal class ParallelBatchEnumerator<TKey>
 
     public ParallelBatchEnumerator(int maxDegreeOfParallelism, Func<IAsyncEnumerator<TokenizedBatch<TKey>>> enumeratorFactory)
     {
-        _enumerators = new IAsyncEnumerator<TokenizedBatch<TKey>>[maxDegreeOfParallelism];
-        for (var i = 0; i < maxDegreeOfParallelism; i++)
-        {
-            _enumerators[i] = enumeratorFactory();
-        }
+        _enumerators = Enumerable.Range(0, maxDegreeOfParallelism)
+            .Select(_ => enumeratorFactory())
+            .ToArray();
     }
 
     public TokenizedBatch<TKey> Current => _currentIndex switch
