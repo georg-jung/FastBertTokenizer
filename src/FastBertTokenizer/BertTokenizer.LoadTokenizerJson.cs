@@ -24,7 +24,7 @@ public partial class BertTokenizer
     /// <exception cref="InvalidOperationException">If a vocabulary is already loaded OR if the vocabulary does not contain one of the specified special tokens.</exception>
     public async Task LoadTokenizerJsonAsync(string tokenizerJsonFilePath)
     {
-        using var file = File.OpenRead(tokenizerJsonFilePath);
+        await using var file = File.OpenRead(tokenizerJsonFilePath);
         await LoadTokenizerJsonAsync(file);
     }
 
