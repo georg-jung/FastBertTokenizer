@@ -44,12 +44,9 @@ internal class ParallelBatchEnumerator<TKey>
             throw new InvalidOperationException("GetAsyncEnumerator() can only be called once.");
         }
 
-        _tasks = new Task<bool>[_enumerators.Length];
-        for (var i = 0; i < _tasks.Length; i++)
-        {
-            var e = _enumerators[i];
-            _tasks[i] = Task.Run(async () => await e.MoveNextAsync(), cancellationToken);
-        }
+        _tasks = _enumerators
+            .Select(e => Task.Run(async () => await e.MoveNextAsync(), cancellationToken))
+            .ToArray();
 
         return this;
     }
