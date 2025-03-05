@@ -15,11 +15,9 @@ internal class ParallelBatchEnumerator<TKey>
 
     public ParallelBatchEnumerator(int maxDegreeOfParallelism, Func<IAsyncEnumerator<TokenizedBatch<TKey>>> enumeratorFactory)
     {
-        _enumerators = new IAsyncEnumerator<TokenizedBatch<TKey>>[maxDegreeOfParallelism];
-        for (var i = 0; i < maxDegreeOfParallelism; i++)
-        {
-            _enumerators[i] = enumeratorFactory();
-        }
+        _enumerators = Enumerable.Range(0, maxDegreeOfParallelism)
+            .Select(_ => enumeratorFactory())
+            .ToArray();
     }
 
     public TokenizedBatch<TKey> Current => _currentIndex switch
@@ -31,12 +29,9 @@ internal class ParallelBatchEnumerator<TKey>
 
     public async ValueTask DisposeAsync()
     {
-        for (var i = 0; i < _enumerators.Length; i++)
+        foreach (var asyncEnumerator in _enumerators.OfType<IAsyncEnumerator<TokenizedBatch<TKey>>>())
         {
-            if (_enumerators[i] is IAsyncEnumerator<TokenizedBatch<TKey>> e)
-            {
-                await e.DisposeAsync();
-            }
+            await asyncEnumerator.DisposeAsync();
         }
     }
 
@@ -47,12 +42,9 @@ internal class ParallelBatchEnumerator<TKey>
             throw new InvalidOperationException("GetAsyncEnumerator() can only be called once.");
         }
 
-        _tasks = new Task<bool>[_enumerators.Length];
-        for (var i = 0; i < _tasks.Length; i++)
-        {
-            var e = _enumerators[i];
-            _tasks[i] = Task.Run(async () => await e.MoveNextAsync());
-        }
+        _tasks = _enumerators
+            .Select(e => Task.Run(async () => await e.MoveNextAsync(), cancellationToken))
+            .ToArray();
 
         return this;
     }
