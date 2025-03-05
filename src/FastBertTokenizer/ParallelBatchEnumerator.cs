@@ -31,12 +31,9 @@ internal class ParallelBatchEnumerator<TKey>
 
     public async ValueTask DisposeAsync()
     {
-        for (var i = 0; i < _enumerators.Length; i++)
+        foreach (var asyncEnumerator in _enumerators.OfType<IAsyncEnumerator<TokenizedBatch<TKey>>>())
         {
-            if (_enumerators[i] is IAsyncEnumerator<TokenizedBatch<TKey>> e)
-            {
-                await e.DisposeAsync();
-            }
+            await asyncEnumerator.DisposeAsync();
         }
     }
 
@@ -51,7 +48,7 @@ internal class ParallelBatchEnumerator<TKey>
         for (var i = 0; i < _tasks.Length; i++)
         {
             var e = _enumerators[i];
-            _tasks[i] = Task.Run(async () => await e.MoveNextAsync());
+            _tasks[i] = Task.Run(async () => await e.MoveNextAsync(), cancellationToken);
         }
 
         return this;
