@@ -1,0 +1,25 @@
+<Solution>
+  <Folder Name="/Examples/">
+    <Project Path="src/examples/QuickStart/QuickStart.csproj" />
+    <Project Path="src/examples/SemanticSearch/SemanticSearch.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="nuget.config" />
+    <File Path="README.md" />
+    <File Path="stylecop.json" />
+    <File Path="version.json" />
+  </Folder>
+  <Project Path="src/Benchmarks/Benchmarks.csproj" />
+  <Project Path="src/FastBertTokenizer.Tests/FastBertTokenizer.Tests.csproj" />
+  <Project Path="src/FastBertTokenizer/FastBertTokenizer.csproj" />
+  <Project Path="src/HuggingfaceTokenizer/Rest/RestHuggingfaceTokenizer.pyproj" Type="888888a0-9f3d-457c-b088-3a5042f75d52">
+    <Build Project="false" />
+  </Project>
+  <Project Path="src/HuggingfaceTokenizer/RustLibWrapper/RustLibWrapper.csproj" />
+  <Project Path="src/VocabLookup/VocabLookup.csproj" />
+</Solution>
