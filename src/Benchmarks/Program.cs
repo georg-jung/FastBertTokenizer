@@ -6,4 +6,6 @@ using Benchmarks;
 
 var tokenizeSpeed = BenchmarkRunner.Run<TokenizeSpeed>();
 var sharpToken = BenchmarkRunner.Run<CompareToSharpToken>();
-var otherLibs = BenchmarkRunner.Run<OtherLibs>();
+
+// This might be interesting to keep but is not something we want to run all the time.
+// var otherLibs = BenchmarkRunner.Run<OtherLibs>();
