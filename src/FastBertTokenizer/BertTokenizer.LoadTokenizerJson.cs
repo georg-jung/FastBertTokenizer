@@ -175,6 +175,7 @@ public partial class BertTokenizer
         // strip_accents (bool, optional) – Whether to strip all accents. If this option is not specified (ie == None), then it will be determined by the value for lowercase (as in the original Bert).
         _stripAccents = tok.Normalizer.StripAccents ?? _lowercaseInput;
         _decoderPrefix = tok.Decoder?.Prefix ?? "##";
+        _cleanupTokenizationSpaces = tok.Decoder?.Cleanup ?? true;
         _normalization = normalization;
         _unk = (unkId ?? throw new InvalidOperationException($"Vocabulary does not contain unknown token {unkToken}."), unkToken);
         _cls = (clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}."), clsToken);

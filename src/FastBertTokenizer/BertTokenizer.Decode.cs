@@ -10,7 +10,7 @@ public partial class BertTokenizer
     private Dictionary<long, string>? _decodePrefixes;
     private Dictionary<long, string>? _decodeSuffixes;
 
-    public string Decode(ReadOnlySpan<long> tokenIds, bool cleanupTokenizationSpaces = true)
+    public string Decode(ReadOnlySpan<long> tokenIds)
     {
         _ = _prefixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
@@ -39,7 +39,7 @@ public partial class BertTokenizer
         {
             if (_decodePrefixes.TryGetValue(id, out var prefix))
             {
-                if (!cleanupTokenizationSpaces || !EmitNoSpaceBefore(prefix))
+                if (!_cleanupTokenizationSpaces || !EmitNoSpaceBefore(prefix))
                 {
                     sb.Append(' ');
                 }
@@ -55,7 +55,7 @@ public partial class BertTokenizer
 
         // There is probably a faster implementation of this.
         // Decode isn't currently the focus though.
-        if (cleanupTokenizationSpaces)
+        if (_cleanupTokenizationSpaces)
         {
             sb.Replace(" ' ", "'");
             sb.Replace(" n't", "n't");
