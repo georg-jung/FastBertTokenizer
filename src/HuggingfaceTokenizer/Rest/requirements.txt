@@ -1,2 +1,2 @@
 Flask==2.3.3
-transformers==4.38.0
+transformers==4.49.0
