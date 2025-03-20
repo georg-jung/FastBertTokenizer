@@ -42,5 +42,5 @@ jobs:
     - run: cargo build --release
       working-directory: src/HuggingfaceTokenizer/RustLib
 
-    - run: dotnet run -c Release -f net6.0
+    - run: dotnet run -c Release -f net8.0
       working-directory: src/Benchmarks

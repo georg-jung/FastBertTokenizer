@@ -2,20 +2,41 @@
 <!-- https://learn.microsoft.com/dotnet/fundamentals/package-validation/diagnostic-ids -->
 <Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:FastBertTokenizer.BertTokenizerExtensions</Target>
+    <Left>lib/net6.0/FastBertTokenizer.dll</Left>
+    <Right>lib/netstandard2.0/FastBertTokenizer.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:System.Runtime.CompilerServices.IsExternalInit</Target>
+    <Left>lib/net6.0/FastBertTokenizer.dll</Left>
+    <Right>lib/netstandard2.0/FastBertTokenizer.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:FastBertTokenizer.BertTokenizer.CreateAsyncBatchEnumerator``1(System.Threading.Channels.ChannelReader{System.ValueTuple{``0,System.String}},System.Int32,System.Int32,System.Int32,System.Nullable{System.Int32})</Target>
+    <Left>lib/net6.0/FastBertTokenizer.dll</Left>
+    <Right>lib/netstandard2.0/FastBertTokenizer.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:FastBertTokenizer.BertTokenizer.Decode(System.ReadOnlySpan{System.Int64},System.Boolean)</Target>
     <Left>lib/net6.0/FastBertTokenizer.dll</Left>
-    <Right>lib/net6.0/FastBertTokenizer.dll</Right>
+    <Right>lib/netstandard2.0/FastBertTokenizer.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
-    <Suppression>
+  <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:FastBertTokenizer.BertTokenizer.Decode(System.ReadOnlySpan{System.Int64},System.Boolean)</Target>
     <Left>lib/net8.0/FastBertTokenizer.dll</Left>
     <Right>lib/net8.0/FastBertTokenizer.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
-    <Suppression>
+  <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:FastBertTokenizer.BertTokenizer.Decode(System.ReadOnlySpan{System.Int64},System.Boolean)</Target>
     <Left>lib/netstandard2.0/FastBertTokenizer.dll</Left>
