@@ -33,7 +33,7 @@ jobs:
       doc_version: ${{ steps.nbgv.outputs.SemVer2 }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
         lfs: true
