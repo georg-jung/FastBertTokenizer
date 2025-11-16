@@ -15,8 +15,10 @@ public partial class BertTokenizer
         _ = _prefixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
         _ = _suffixes ?? throw new InvalidOperationException("Vocabulary not loaded.");
 
-        _decodeSuffixes ??= _suffixes.ToDictionary(x => x.Value, x => x.Key.ToString());
-        _decodePrefixes ??= _prefixes.ToDictionary(x => x.Value, x => x.Key.ToString());
+        if (_decodeSuffixes is null || _decodePrefixes is null)
+        {
+            InitializeDecodeDictionaries();
+        }
 
         if (tokenIds.Length == 0)
         {
@@ -72,9 +74,24 @@ public partial class BertTokenizer
     // See https://github.com/huggingface/tokenizers/blob/daf361676bdfd14088f7e0bc087effc6a9cfdf3e/tokenizers/src/decoders/wordpiece.rs#L31
     private bool EmitNoSpaceBefore(string prefix)
     {
-        return ".".Equals(prefix, StringComparison.Ordinal)
-            || "?".Equals(prefix, StringComparison.Ordinal)
-            || "!".Equals(prefix, StringComparison.Ordinal)
-            || ",".Equals(prefix, StringComparison.Ordinal);
+        return prefix.Length == 1 && (prefix[0] == '.' || prefix[0] == '?' || prefix[0] == '!' || prefix[0] == ',');
+    }
+
+    private void InitializeDecodeDictionaries()
+    {
+        var decodeSuffixes = new Dictionary<long, string>(_suffixes!.Count);
+        foreach (var kvp in _suffixes!)
+        {
+            decodeSuffixes[kvp.Value] = kvp.Key.ToString();
+        }
+
+        var decodePrefixes = new Dictionary<long, string>(_prefixes!.Count);
+        foreach (var kvp in _prefixes!)
+        {
+            decodePrefixes[kvp.Value] = kvp.Key.ToString();
+        }
+
+        _decodeSuffixes = decodeSuffixes;
+        _decodePrefixes = decodePrefixes;
     }
 }
