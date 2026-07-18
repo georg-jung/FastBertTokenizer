@@ -20,12 +20,6 @@
           "System.Management": "9.0.5"
         }
       },
-      "FastBertTokenizer": {
-        "type": "Direct",
-        "requested": "[1.0.28, )",
-        "resolved": "1.0.28",
-        "contentHash": "7luZ+kHNzGesTIri8FfTEq6hLqPrMkd0Gq4KdFyytqDnqSueuQckxzqb7yYI6FOL9ucEwD7szMJAXDfcaywJ2A=="
-      },
       "Microsoft.ML.Tokenizers": {
         "type": "Direct",
         "requested": "[2.0.0, )",
@@ -210,6 +204,9 @@
         "resolved": "4.7.0",
         "contentHash": "VybpaOQQhqE6siHppMktjfGBw1GCwvCqiufqmP8F1nj7fTUNtW35LOEt3UZTEsECfo+ELAl/9o9nJx3U91i7vA=="
       },
+      "fastberttokenizer": {
+        "type": "Project"
+      },
       "rustlibwrapper": {
         "type": "Project"
       }
@@ -232,12 +229,6 @@
           "Perfolizer": "[0.6.1]",
           "System.Management": "9.0.5"
         }
-      },
-      "FastBertTokenizer": {
-        "type": "Direct",
-        "requested": "[1.0.28, )",
-        "resolved": "1.0.28",
-        "contentHash": "7luZ+kHNzGesTIri8FfTEq6hLqPrMkd0Gq4KdFyytqDnqSueuQckxzqb7yYI6FOL9ucEwD7szMJAXDfcaywJ2A=="
       },
       "Microsoft.ML.Tokenizers": {
         "type": "Direct",
@@ -433,6 +424,9 @@
         "dependencies": {
           "System.Collections.Immutable": "9.0.0"
         }
+      },
+      "fastberttokenizer": {
+        "type": "Project"
       },
       "rustlibwrapper": {
         "type": "Project"

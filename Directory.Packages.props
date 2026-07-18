@@ -15,6 +15,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <!-- Referenced explicitly by net48-targeting projects: whether the SDK injects this
+         automatically depends on OS and SDK version, which breaks locked-mode restore
+         (NU1004) when packages.lock.json was generated in a different environment. -->
+    <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
     <!-- Benchmark baseline; keep in sync with Benchmarks.csproj and BenchmarkDefaults.BaselineNuGetVersion.
          BenchmarkDotNet's auto-generated projects live under bin/ and thus resolve this centrally pinned
          version; a mismatch with the version referenced by Benchmarks.csproj fails their restore (NU1109). -->
