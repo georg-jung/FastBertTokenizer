@@ -5,10 +5,15 @@
 #   python verify.py
 
 import json
+import sys
 
 from bench import CORPUS, MAX_LENGTH, TOKENIZER_JSON, VOCAB_TXT
 from flash_tokenizer import BertTokenizerFlash
 from tokenizers import Tokenizer
+
+# Fail if parity regresses clearly beyond the known ~0.4% (flash-tokenizer 1.2.0 on this corpus),
+# so CI notices instead of burying it in logs. Adjust deliberately if flash's behavior changes.
+MAX_MISMATCH_RATE = 0.01
 
 with open(CORPUS, encoding="utf-8") as f:
     corpus = list(json.load(f).values())
@@ -42,7 +47,12 @@ mismatches = sum(1 for a, b in zip(hf_ids, flash_ids) if a != b)
 total_tokens_hf = sum(len(x) for x in hf_ids)
 total_tokens_flash = sum(len(x) for x in flash_ids)
 
+mismatch_rate = mismatches / len(corpus)
 print(f"documents:                    {len(corpus)}")
 print(f"total tokens (hf tokenizers): {total_tokens_hf}")
 print(f"total tokens (flash):         {total_tokens_flash}")
-print(f"documents with id mismatch:   {mismatches} ({mismatches / len(corpus):.2%})")
+print(f"documents with id mismatch:   {mismatches} ({mismatch_rate:.2%})")
+
+if mismatch_rate > MAX_MISMATCH_RATE:
+    print(f"FAIL: mismatch rate exceeds the expected maximum of {MAX_MISMATCH_RATE:.2%}")
+    sys.exit(1)

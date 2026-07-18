@@ -30,6 +30,7 @@ public class OtherLibs
     private string[] _corpus = null!;
     private Microsoft.ML.Tokenizers.BertTokenizer _mlTokenizer = null!;
     private Tokenizers.DotNet.Tokenizer _tokenizersDotNetTokenizer = null!;
+    private string? _truncatingTokenizerJsonPath;
 
     public OtherLibs()
         : this("data/wiki-simple.json.br", "data/baai-bge-small-en/vocab.txt", "data/baai-bge-small-en/tokenizer.json", 512)
@@ -70,9 +71,18 @@ public class OtherLibs
             ["strategy"] = "LongestFirst",
             ["stride"] = 0,
         };
-        var truncatingTokenizerJsonPath = Path.Combine(Path.GetTempPath(), $"fastberttokenizer-bench-truncating-tokenizer.json");
-        await File.WriteAllTextAsync(truncatingTokenizerJsonPath, tokenizerJson.ToJsonString());
-        _tokenizersDotNetTokenizer = new(vocabPath: truncatingTokenizerJsonPath);
+        _truncatingTokenizerJsonPath = Path.Combine(Path.GetTempPath(), $"fastberttokenizer-bench-truncating-tokenizer-{Guid.NewGuid():N}.json");
+        await File.WriteAllTextAsync(_truncatingTokenizerJsonPath, tokenizerJson.ToJsonString());
+        _tokenizersDotNetTokenizer = new(vocabPath: _truncatingTokenizerJsonPath);
+    }
+
+    [GlobalCleanup]
+    public void Cleanup()
+    {
+        if (_truncatingTokenizerJsonPath is not null)
+        {
+            File.Delete(_truncatingTokenizerJsonPath);
+        }
     }
 
     [Benchmark(Baseline = true)]
