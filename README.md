@@ -65,66 +65,34 @@ Note that while [BERTTokenizers handles token type incorrectly](https://github.c
 
 > tl;dr: FastBertTokenizer can encode 1 GB of text in around 2 s on a typical notebook CPU from 2020.
 
-All benchmarks were performed on a typical end user notebook, a ThinkPad T14s Gen 1:
+The benchmark suite lives in [`src/Benchmarks`](src/Benchmarks/) — see [its README](src/Benchmarks/README.md) for how to run it yourself. All benchmarks tokenize the same corpus (15,000 articles from simple english wikipedia) with the same vocabulary (baai-bge-small-en, which uses bert-base-uncased's vocab), truncating to 512 tokens per input. They cover
 
-```txt
-BenchmarkDotNet v0.13.12, Windows 11 (10.0.22631.3527/23H2/2023Update/SunValley3)
-AMD Ryzen 7 PRO 4750U with Radeon Graphics, 1 CPU, 16 logical and 8 physical cores
-.NET SDK 8.0.204
-```
+* the different usage patterns of FastBertTokenizer itself — for the local build as well as the latest released NuGet version, each on all supported (non-EOL) runtimes, and
+* comparisons against other tokenizer libraries usable from .NET.
 
-Similar results can also be observed using [GitHub Actions](https://github.com/georg-jung/FastBertTokenizer/actions/workflows/benchmark.yml). Note that using shared CI runners for benchmarking has drawbacks and can lead to varying results though.
+[CI](https://github.com/georg-jung/FastBertTokenizer/actions/workflows/benchmark.yml) runs a quick smoke pass on every push/PR and the full suite on demand and monthly; every run uploads the complete BenchmarkDotNet results as workflow artifacts. The numbers below come from a full run on a shared GitHub Actions runner (`ubuntu-24.04`): anyone can reproduce them, but they are noisier than numbers from dedicated hardware — treat small differences as noise, and note that multi-threaded results depend on the runner's (few) cores.
 
-### on NET 6.0 vs. on NET 8.0
+### FastBertTokenizer usage patterns: .NET 8 vs. .NET 10
 
-* `.NET 6.0.29 (6.0.2924.17105), X64 RyuJIT AVX2` vs `.NET 8.0.4 (8.0.424.16909), X64 RyuJIT AVX2`
-* Workload: Encode up to 512 tokens from each of 15,000 articles from simple english wikipedia.
-* Results: Total tokens produced: 3,657,145; on .NET 8: ~11m tokens/s single threaded, 73m tokens/s multi threaded.
+* Workload: Encode up to 512 tokens from each of the 15,000 articles (≈3.66m tokens produced).
 
-| Method                       | Runtime  | Mean      | Error    | StdDev   | Ratio | Gen0       | Gen1       | Gen2     | Allocated | Alloc Ratio |
-|----------------------------- |--------- |----------:|---------:|---------:|------:|-----------:|-----------:|---------:|----------:|------------:|
-| Singlethreaded               | .NET 6.0 | 450.39 ms | 7.340 ms | 6.866 ms |  1.00 |          - |          - |        - |      2 MB |        1.00 |
-| MultithreadedMemReuseBatched | .NET 6.0 |  72.46 ms | 1.337 ms | 1.251 ms |  0.16 |   750.0000 |   250.0000 | 250.0000 |  12.75 MB |        6.39 |
-|                              |          |           |          |          |       |            |            |          |           |             |
-| Singlethreaded               | .NET 8.0 | 332.51 ms | 6.574 ms | 7.826 ms |  1.00 |          - |          - |        - |   1.99 MB |        1.00 |
-| MultithreadedMemReuseBatched | .NET 8.0 |  50.83 ms | 0.999 ms | 1.995 ms |  0.15 |   500.0000 |          - |        - |  12.75 MB |        6.40 |
+*(Table pending — will be filled in from the first full CI run of this benchmark setup.)*
 
-### vs. [SharpToken](https://github.com/dmitry-brazhenko/SharpToken)
+### vs. other tokenizer libraries for .NET
 
-* `SharpToken v2.0.2`
-* `.NET 8.0.4 (8.0.424.16909), X64 RyuJIT AVX2`
-* Workload: Fully encode 15,000 articles from simple english wikipedia. Total tokens produced by FastBertTokenizer: 5,807,949 (~9.4m tokens/s single threaded).
+* [Microsoft.ML.Tokenizers](https://www.nuget.org/packages/Microsoft.ML.Tokenizers)' `BertTokenizer` (v2.0.0)
+* [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (v1.4.1), .NET bindings for Hugging Face's Rust [tokenizers](https://github.com/huggingface/tokenizers)
+* this repo's own minimal Rust FFI wrapper around Hugging Face tokenizers (see [`src/HuggingfaceTokenizer`](src/HuggingfaceTokenizer))
 
-This isn't an apples to apples comparison as BPE (what SharpToken does) and WordPiece encoding (what FastBertTokenizer does) are different tasks/algorithms. Both were applied to exactly the same texts/corpus though.
+*(Table pending — will be filled in from the first full CI run of this benchmark setup.)*
 
-| Method                        | Mean       | Error    | StdDev   | Gen0      | Gen1      | Allocated |
-|------------------------------ |-----------:|---------:|---------:|----------:|----------:|----------:|
-| SharpTokenFullArticles        | 1,551.9 ms | 25.82 ms | 24.15 ms | 5000.0000 | 2000.0000 |  32.56 MB |
-| FastBertTokenizerFullArticles |   620.3 ms |  7.00 ms |  6.21 ms |         - |         - |   2.26 MB |
+Mind that the compared libraries don't do exactly the same work: FastBertTokenizer emits input_ids and attention_mask, Microsoft.ML.Tokenizers and Tokenizers.DotNet emit just input_ids, and the Hugging Face tokenizers library computes offsets and more. Correctness also differs: FastBertTokenizer's output is [continuously tested](src/FastBertTokenizer.Tests) to match Hugging Face transformers' `AutoTokenizer`.
 
-### vs. HuggingFace [tokenizers](https://github.com/huggingface/tokenizers) (Rust)
+### vs. Hugging Face tokenizers (Rust) and flash-tokenizer (C++)
 
-`tokenizers v0.19.1`
+For a cross-language perspective, [`src/HuggingfaceTokenizer/BenchPython`](src/HuggingfaceTokenizer/BenchPython) benchmarks [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) against [flash-tokenizer](https://github.com/NLPOptimize/flash-tokenizer) from Python on the same corpus and vocabulary, single-threaded and batched. Cross-language numbers are only roughly comparable to the .NET ones (different drivers, process startup, etc.). An id-level parity check (`verify.py`) shows flash-tokenizer produces identical ids for 99.6% of the corpus documents while Hugging Face tokenizers matches `AutoTokenizer` exactly; [`src/HuggingfaceTokenizer/BenchRust`](src/HuggingfaceTokenizer/BenchRust) additionally measures Hugging Face tokenizers natively via criterion.rs, without any FFI or Python overhead.
 
-I'm not really experienced in benchmarking rust code, but my attempts using criterion.rs (see `src/HuggingfaceTokenizer/BenchRust`) suggest that it takes tokenizers around
-
-* batched/multi threaded: ~2 s (~2.9m tokens/s)
-* single threaded: ~10 s (~0.6m tokens/s)
-
-to produce 5,807,947 tokens from the same 15k simple english wikipedia articles. Contrary to what one might expect, this does mean that FastBertTokenizer, beeing a managed implementation, outperforms tokenizers. It should be noted though that tokenizers has a much more complete feature set while FastBertTokenizer is specifically optimized for WordPiece/Bert encoding.
-
-The tokenizers repo states `Takes less than 20 seconds to tokenize a GB of text on a server's CPU.` As 26 MB of text take ~2s on my notebook CPU, 1 GB would take roughly 80 s. I think it makes sense that "a server's CPU" might be 4x as fast as my notebook's CPU and thus think my results seem plausible. It is however also possible that I unintentionally handicapped tokenizers somehow. Please let me know if you think so!
-
-### vs. [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers)
-
-* `BERTTokenizers v1.2.0`
-* `.NET 8.0.4 (8.0.424.16909), X64 RyuJIT AVX2`
-* Workload: Prefixes of the contents of 15k simple english wikipedia articles, preprocessed to make them encodable by BERTTokenizers.
-
-| Method                                     | Mean       | Error    | StdDev   | Gen0        | Gen1       | Gen2      | Allocated  |
-|------------------------------------------- |-----------:|---------:|---------:|------------:|-----------:|----------:|-----------:|
-| NMZivkovic_BertTokenizers                  | 2,576.0 ms | 15.49 ms | 13.73 ms | 968000.0000 | 40000.0000 | 1000.0000 | 3430.51 MB |
-| FastBertTokenizer_SameDataAsBertTokenizers |   229.8 ms |  4.55 ms |  6.23 ms |           - |          - |         - |    1.03 MB |
+*(Numbers pending — will be filled in from the first full CI run of this benchmark setup.)*
 
 ## Logo
 
