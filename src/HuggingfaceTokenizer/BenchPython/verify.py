@@ -17,8 +17,25 @@ hf = Tokenizer.from_file(TOKENIZER_JSON)
 hf.enable_truncation(max_length=MAX_LENGTH)
 flash = BertTokenizerFlash(VOCAB_TXT, do_lower_case=True, model_max_length=MAX_LENGTH)
 
-hf_ids = [enc.ids for enc in hf.encode_batch(corpus)]
+PAD_ID = 0
+
+
+def strip_padding(ids):
+    """Remove trailing [PAD] tokens so the comparison measures tokenizer parity, not padding.
+
+    flash-tokenizer 1.2.0 returns ragged, unpadded lists for padding="longest", but this keeps
+    the check honest even if that behavior changes. hf.encode_batch never pads (no padding
+    configured), so stripping both sides is symmetric.
+    """
+    end = len(ids)
+    while end > 0 and ids[end - 1] == PAD_ID:
+        end -= 1
+    return ids[:end]
+
+
+hf_ids = [strip_padding(enc.ids) for enc in hf.encode_batch(corpus)]
 flash_ids = flash(corpus, padding="longest", max_length=MAX_LENGTH, do_multiprocess=True).input_ids
+flash_ids = [strip_padding(ids) for ids in flash_ids]
 
 assert len(hf_ids) == len(flash_ids)
 mismatches = sum(1 for a, b in zip(hf_ids, flash_ids) if a != b)

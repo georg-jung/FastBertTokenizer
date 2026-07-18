@@ -13,6 +13,11 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <!-- The FastBertTokenizer reference differs between LocalBuild (project) and other
+         configurations (NuGet baseline package), so a lock file can never be consistent
+         with both and locked-mode CI restores fail with NU1004 for one of them. -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <RestoreLockedMode>false</RestoreLockedMode>
   </PropertyGroup>
 
   <ItemGroup>

@@ -124,8 +124,10 @@ jobs:
     - run: pip install -r requirements.txt
       working-directory: src/HuggingfaceTokenizer/BenchPython
     - run: python verify.py | tee verify-output.txt
+      shell: bash # explicit shell: bash adds pipefail, so failures aren't masked by tee
       working-directory: src/HuggingfaceTokenizer/BenchPython
     - run: python bench.py -o pyperf-results.json | tee bench-output.txt
+      shell: bash # explicit shell: bash adds pipefail, so failures aren't masked by tee
       working-directory: src/HuggingfaceTokenizer/BenchPython
     - uses: actions/upload-artifact@v4
       if: always()
