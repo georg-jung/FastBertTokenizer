@@ -18,4 +18,9 @@ if (args.Contains("--smoke"))
     args = args.Where(a => a != "--smoke").ToArray();
 }
 
-BenchmarkSwitcher.FromAssembly(typeof(TokenizeSpeed).Assembly).Run(args);
+var summaries = BenchmarkSwitcher.FromAssembly(typeof(TokenizeSpeed).Assembly).Run(args).ToList();
+
+// BenchmarkDotNet reports failed benchmarks (e.g. generated project build failures or crashed
+// benchmark processes) just as NA rows. Exit non-zero so CI notices; informational invocations
+// like --list produce no summaries and still exit 0.
+return summaries.Any(s => s.HasCriticalValidationErrors || s.Reports.Any(r => !r.Success)) ? 1 : 0;

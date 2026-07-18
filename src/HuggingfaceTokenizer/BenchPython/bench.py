@@ -55,7 +55,11 @@ if __name__ == "__main__":
         setup=SETUP_FLASH,
     )
 
-    # Batch mode: both libraries parallelize natively (Rust/rayon vs. C++ thread pool).
+    # Batch mode: both libraries run their native tokenizers in parallel (Rust/rayon vs. C++
+    # thread pool). Note that flash-tokenizer's returned BatchEncoding additionally builds
+    # attention_mask/token_type_ids as single-threaded pure-Python lists (roughly a third of
+    # its batch time here), while Hugging Face keeps masks in Rust. The numbers thus reflect
+    # each library's default user-facing API, not pure native tokenization time.
     runner.timeit(
         name="hf_tokenizers_batch",
         stmt="tok.encode_batch(corpus)",

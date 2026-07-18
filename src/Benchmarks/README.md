@@ -25,7 +25,9 @@ Prerequisites:
 * The .NET SDK version pinned in [`global.json`](../../global.json) plus the .NET 8 runtime.
 * A Rust toolchain: the `OtherLibs` suite P/Invokes a native library that needs to be
   built once via `cargo build --release` in [`../HuggingfaceTokenizer/RustLib`](../HuggingfaceTokenizer/RustLib).
-* The repo's Git LFS files (the corpus) need to be pulled.
+
+The benchmark corpus (`data/wiki-simple.json.br`) ships in the repo and is available after
+a normal clone.
 
 ```bash
 cd src/HuggingfaceTokenizer/RustLib && cargo build --release && cd ../../Benchmarks
@@ -57,8 +59,8 @@ must be kept in sync with the `FastBertTokenizer` `PackageReference` in
 ## CI
 
 [`benchmark.yml`](../../.github/workflows/benchmark.yml) runs a quick smoke pass on every
-push/PR (to verify the benchmarks and the measured API surface still work) and the full
-suite on demand (workflow_dispatch) and monthly. Every run uploads the complete
+push/PR (except markdown-only changes; it verifies the benchmarks and the measured API
+surface still work) and the full suite on demand (workflow_dispatch) and monthly. Every run uploads the complete
 `BenchmarkDotNet.Artifacts` results as workflow artifacts.
 
 ## Related benchmarks

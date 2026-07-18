@@ -63,14 +63,14 @@ Note that while [BERTTokenizers handles token type incorrectly](https://github.c
 
 ## Speed / Benchmarks
 
-> tl;dr: FastBertTokenizer can encode 1 GB of text in around 2 s on a typical notebook CPU from 2020.
+> tl;dr: FastBertTokenizer can encode 1 GB of text in around 2 s on a typical notebook CPU from 2020 (measured multi-threaded on a ThinkPad T14s Gen 1, AMD Ryzen 7 PRO 4750U, with v1.x: ~51 ms for the ~26 MB benchmark corpus on .NET 8).
 
 The benchmark suite lives in [`src/Benchmarks`](src/Benchmarks/) — see [its README](src/Benchmarks/README.md) for how to run it yourself. All benchmarks tokenize the same corpus (15,000 articles from simple english wikipedia) with the same vocabulary (baai-bge-small-en, which uses bert-base-uncased's vocab), truncating to 512 tokens per input. They cover
 
 * the different usage patterns of FastBertTokenizer itself — for the local build as well as the latest released NuGet version, each on all supported (non-EOL) runtimes, and
 * comparisons against other tokenizer libraries usable from .NET.
 
-[CI](https://github.com/georg-jung/FastBertTokenizer/actions/workflows/benchmark.yml) runs a quick smoke pass on every push/PR and the full suite on demand and monthly; every run uploads the complete BenchmarkDotNet results as workflow artifacts. The numbers below come from a full run on a shared GitHub Actions runner (`ubuntu-24.04`): anyone can reproduce them, but they are noisier than numbers from dedicated hardware — treat small differences as noise, and note that multi-threaded results depend on the runner's (few) cores.
+[CI](https://github.com/georg-jung/FastBertTokenizer/actions/workflows/benchmark.yml) runs a quick smoke pass on every push/PR (except markdown-only changes) and the full suite on demand and monthly; every run uploads the complete BenchmarkDotNet results as workflow artifacts. The numbers below come from a full run on a shared GitHub Actions runner (`ubuntu-24.04`): anyone can reproduce them, but they are noisier than numbers from dedicated hardware — treat small differences as noise, and note that multi-threaded results depend on the runner's (few) cores.
 
 ### FastBertTokenizer usage patterns: .NET 8 vs. .NET 10
 
@@ -90,7 +90,7 @@ Mind that the compared libraries don't do exactly the same work: FastBertTokeniz
 
 ### vs. Hugging Face tokenizers (Rust) and flash-tokenizer (C++)
 
-For a cross-language perspective, [`src/HuggingfaceTokenizer/BenchPython`](src/HuggingfaceTokenizer/BenchPython) benchmarks [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) against [flash-tokenizer](https://github.com/NLPOptimize/flash-tokenizer) from Python on the same corpus and vocabulary, single-threaded and batched. Cross-language numbers are only roughly comparable to the .NET ones (different drivers, process startup, etc.). An id-level parity check (`verify.py`) shows flash-tokenizer produces identical ids for 99.6% of the corpus documents while Hugging Face tokenizers matches `AutoTokenizer` exactly; [`src/HuggingfaceTokenizer/BenchRust`](src/HuggingfaceTokenizer/BenchRust) additionally measures Hugging Face tokenizers natively via criterion.rs, without any FFI or Python overhead.
+For a cross-language perspective, [`src/HuggingfaceTokenizer/BenchPython`](src/HuggingfaceTokenizer/BenchPython) benchmarks [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) against [flash-tokenizer](https://github.com/NLPOptimize/flash-tokenizer) from Python on the same corpus and vocabulary, single-threaded and batched. Cross-language numbers are only roughly comparable to the .NET ones (different drivers, process startup, etc.). An id-level parity check (`verify.py`) shows flash-tokenizer produces ids identical to Hugging Face tokenizers for 99.6% of the corpus documents (Hugging Face's fast `AutoTokenizer` is itself backed by the tokenizers library); [`src/HuggingfaceTokenizer/BenchRust`](src/HuggingfaceTokenizer/BenchRust) additionally measures Hugging Face tokenizers natively via criterion.rs, without any FFI or Python overhead.
 
 *(Numbers pending — will be filled in from the first full CI run of this benchmark setup.)*
 

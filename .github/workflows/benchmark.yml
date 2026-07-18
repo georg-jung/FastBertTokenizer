@@ -60,7 +60,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: benchmark-smoke-${{ github.run_number }}
+        name: benchmark-smoke-${{ github.run_number }}-${{ github.run_attempt }}
         path: src/Benchmarks/BenchmarkDotNet.Artifacts/**/*
 
   # Full suite: all benchmarks, local build vs. released NuGet baseline on all
@@ -101,7 +101,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: benchmark-full-${{ github.run_number }}
+        name: benchmark-full-${{ github.run_number }}-${{ github.run_attempt }}
         path: src/Benchmarks/BenchmarkDotNet.Artifacts/**/*
 
   # Cross-language comparison: Hugging Face tokenizers (Rust) vs. flash-tokenizer (C++)
@@ -132,7 +132,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: benchmark-python-${{ github.run_number }}
+        name: benchmark-python-${{ github.run_number }}-${{ github.run_attempt }}
         path: |
           src/HuggingfaceTokenizer/BenchPython/pyperf-results.json
           src/HuggingfaceTokenizer/BenchPython/*-output.txt
