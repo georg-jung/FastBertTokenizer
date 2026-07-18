@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -17,26 +17,25 @@
 
   <ItemGroup>
     <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.115" />
-    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageReference Include="BERTTokenizers" Version="1.2.0" />
     <PackageReference Include="SharpToken" Version="2.0.3" />
-    <PackageReference Include="System.Interactive" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(Configuration)' == 'LocalBuild' ">
     <ProjectReference Include="..\FastBertTokenizer\FastBertTokenizer.csproj" />
   </ItemGroup>
 
+  <!-- Keep this version in sync with BenchmarkDefaults.BaselineNuGetVersion in BenchmarkConfigs.cs. -->
   <ItemGroup Condition=" '$(Configuration)' != 'LocalBuild' ">
-    <PackageReference Include="FastBertTokenizer" Version="0.5.18-alpha" />
+    <PackageReference Include="FastBertTokenizer" Version="1.0.28" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\HuggingfaceTokenizer\RustLibWrapper\RustLibWrapper.csproj" />
   </ItemGroup>
 
-    <ItemGroup>
+  <ItemGroup>
     <None Include="../../data/wiki-simple.json.br">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>data/wiki-simple.json.br</Link>

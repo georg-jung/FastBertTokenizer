@@ -3,19 +3,14 @@
 
 using System.Threading.Channels;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Diagnosers;
-using BenchmarkDotNet.Environments;
-using BenchmarkDotNet.Jobs;
 using FastBertTokenizer;
 
 namespace Benchmarks;
 
-[Config(typeof(Config))]
+[Config(typeof(SpeedConfig))]
 [MemoryDiagnoser]
 /*
 [PerfCollectProfiler(performExtraBenchmarksRun: false)]
-[EtwProfiler(performExtraBenchmarksRun: false)]
 [EventPipeProfiler(EventPipeProfile.CpuSampling)] // for speedscope files
 */
 public class TokenizeSpeed
@@ -72,19 +67,6 @@ public class TokenizeSpeed
         }
 
         return (iids, attm, toktyp);
-    }
-
-    [Benchmark]
-    public IReadOnlyCollection<(ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds)> MultithreadedAllocating()
-    {
-        // This would produce wrong results because BertTokenizer is not thread-safe.
-        List<(ReadOnlyMemory<long> InputIds, ReadOnlyMemory<long> AttentionMask, ReadOnlyMemory<long> TokenTypeIds)> res = new(_corpus.Length);
-        foreach(var x in _corpus.AsParallel().AsOrdered().Select(x => _tokenizer.Encode(x, _maxSequenceLength)))
-        {
-            res.Add(x);
-        }
-
-        return res;
     }
 
     [Benchmark]
@@ -168,21 +150,5 @@ public class TokenizeSpeed
         }
 
         return ret;
-    }
-
-    private sealed class Config : ManualConfig
-    {
-        public Config()
-        {
-            var baseJob = Job.Default;
-            var localJob = baseJob.WithCustomBuildConfiguration("LocalBuild");
-            var nugetJob = baseJob.WithNuGet("FastBertTokenizer", "1.0.28");
-            AddJob(localJob.WithRuntime(CoreRuntime.Core90));
-            AddJob(localJob.WithRuntime(CoreRuntime.Core80));
-            AddJob(localJob.WithRuntime(CoreRuntime.Core60));
-            AddJob(nugetJob.WithRuntime(CoreRuntime.Core90));
-            AddJob(nugetJob.WithRuntime(CoreRuntime.Core80));
-            AddJob(nugetJob.WithRuntime(CoreRuntime.Core60));
-        }
     }
 }
