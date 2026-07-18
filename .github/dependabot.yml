@@ -12,3 +12,7 @@ updates:
   directory: "/"
   schedule:
     interval: "daily"
+- package-ecosystem: pip
+  directory: "/src/HuggingfaceTokenizer/BenchPython"
+  schedule:
+    interval: weekly

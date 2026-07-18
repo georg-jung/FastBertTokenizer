@@ -2,7 +2,12 @@ name: Benchmark
 
 on:
   workflow_dispatch:
+  schedule:
+    # Full suite once a month to keep a rough performance history via artifacts.
+    - cron: '30 4 3 * *'
   push:
+    paths-ignore:
+    - '**.md'
   pull_request:
     paths-ignore:
     - '**.md'
@@ -12,9 +17,17 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
 
+concurrency:
+  group: benchmark-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+  # Quick smoke run on every push/PR: verifies the benchmarks (and thus the measured
+  # API surface) still work and gives a rough performance indication. Uses short
+  # BenchmarkDotNet jobs; shared runners are too noisy for precise numbers anyway.
+  smoke:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -32,8 +45,7 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         global-json-file: global.json
-    - uses: dotnet/nbgv@v0.4
-      id: nbgv
+        dotnet-version: 8.0.x # runtime for the net8.0 benchmark jobs
 
     - uses: Swatinem/rust-cache@v2
       with:
@@ -42,5 +54,83 @@ jobs:
     - run: cargo build --release
       working-directory: src/HuggingfaceTokenizer/RustLib
 
-    - run: dotnet run -c Release -f net8.0
+    - run: dotnet run -c Release -f net10.0 -- --smoke --filter '*'
       working-directory: src/Benchmarks
+
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: benchmark-smoke-${{ github.run_number }}
+        path: src/Benchmarks/BenchmarkDotNet.Artifacts/**/*
+
+  # Full suite: all benchmarks, local build vs. released NuGet baseline on all
+  # supported runtimes plus the comparison against other libraries. Slow; runs
+  # on demand and monthly.
+  full:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+        lfs: true
+    - uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: global.json
+        dotnet-version: 8.0.x # runtime for the net8.0 benchmark jobs
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: |
+          src/HuggingfaceTokenizer/RustLib
+    - run: cargo build --release
+      working-directory: src/HuggingfaceTokenizer/RustLib
+
+    - run: dotnet run -c Release -f net10.0 -- --filter '*'
+      working-directory: src/Benchmarks
+
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: benchmark-full-${{ github.run_number }}
+        path: src/Benchmarks/BenchmarkDotNet.Artifacts/**/*
+
+  # Cross-language comparison: Hugging Face tokenizers (Rust) vs. flash-tokenizer (C++)
+  # on the same corpus and vocabulary as the .NET benchmarks. See
+  # src/HuggingfaceTokenizer/BenchPython for details.
+  python-comparison:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        lfs: true
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: pip
+        cache-dependency-path: src/HuggingfaceTokenizer/BenchPython/requirements.txt
+    - run: pip install -r requirements.txt
+      working-directory: src/HuggingfaceTokenizer/BenchPython
+    - run: python verify.py | tee verify-output.txt
+      working-directory: src/HuggingfaceTokenizer/BenchPython
+    - run: python bench.py -o pyperf-results.json | tee bench-output.txt
+      working-directory: src/HuggingfaceTokenizer/BenchPython
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: benchmark-python-${{ github.run_number }}
+        path: |
+          src/HuggingfaceTokenizer/BenchPython/pyperf-results.json
+          src/HuggingfaceTokenizer/BenchPython/*-output.txt
