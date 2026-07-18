@@ -1,0 +1,3 @@
+tokenizers>=0.23
+flash-tokenizer==1.2.0
+pyperf>=2.6

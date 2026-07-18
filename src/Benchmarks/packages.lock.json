@@ -20,11 +20,14 @@
           "System.Management": "9.0.5"
         }
       },
-      "BERTTokenizers": {
+      "Microsoft.ML.Tokenizers": {
         "type": "Direct",
-        "requested": "[1.2.0, )",
-        "resolved": "1.2.0",
-        "contentHash": "g9sA7AIvzc0lzt1JZ4XLsus67lKHcxRqYqIWCrVs/80WRLJMxeRVyGFps4ZHE4Qan1JeyKZOB5pzBvtL2SM9dQ=="
+        "requested": "[2.0.0, )",
+        "resolved": "2.0.0",
+        "contentHash": "+b8lT4cLLO/sBR2hjvE/qG6qrZG15h7/PBvnIrzTh4xDaAxdHUY6449rC+1pHzQUsBiCHZVbj+VMn+xS0sL7TA==",
+        "dependencies": {
+          "Google.Protobuf": "3.30.2"
+        }
       },
       "Nerdbank.GitVersioning": {
         "type": "Direct",
@@ -32,11 +35,23 @@
         "resolved": "3.7.115",
         "contentHash": "EpXamaAdRfG/BMxGgvZlTM0npRnkmXUjAj8OdNKd17t4oN+2nvjdv/KnFmzOOMDqvlwB49UCwtOHJrAQTfUBtQ=="
       },
-      "SharpToken": {
+      "Tokenizers.DotNet": {
         "type": "Direct",
-        "requested": "[2.0.3, )",
-        "resolved": "2.0.3",
-        "contentHash": "QFcBRPeLCL0rhW93x8zpTY0ryBk49/s1w4NY/OkyZWIZG9rBNwtwnJJZfu299d4pHM9dLBNB5ua/Y4Fj4c+hCw=="
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "uOAv3ttXMOv8OhyxdTxCCLN52EsjERhdY9jwGbncSzTbZvGzEDPQDqLkZpgD3RslwRVsv7YTXgScrEjsHnaa1w=="
+      },
+      "Tokenizers.DotNet.runtime.linux-x64": {
+        "type": "Direct",
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "1+y49KrpvOKc9QYFpSy8/Xsot6LVH6oWQ1Ne4NBcZTopvVd+9J6AbgSmZKjMK/bhYZQjF7bnYS6EaeiXP/iJ3g=="
+      },
+      "Tokenizers.DotNet.runtime.win-x64": {
+        "type": "Direct",
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "AcjRf1y5/ArFL16no9eR5Tg8HeS0CUdYfypASvszuE6+KfHXndmtnh5IeqWKnIP6F2KNSSGKXcncgXKx0RDcWQ=="
       },
       "BenchmarkDotNet.Annotations": {
         "type": "Transitive",
@@ -52,6 +67,11 @@
         "type": "Transitive",
         "resolved": "2.3.0",
         "contentHash": "2ap/rYmjtzCOT8hxrnEW/QeiOt+paD8iRrIcdKX0cxVwWLFa1e+JDBNeECakmccXrSFeBQuu5AV8SNkipFMMMw=="
+      },
+      "Google.Protobuf": {
+        "type": "Transitive",
+        "resolved": "3.30.2",
+        "contentHash": "Y2aOVLIt75yeeEWigg9V9YnjsEm53sADtLGq0gLhwaXpk3iu8tYSoauolyhenagA2sWno2TQ2WujI0HQd6s1Vw=="
       },
       "Iced": {
         "type": "Transitive",
@@ -210,11 +230,14 @@
           "System.Management": "9.0.5"
         }
       },
-      "BERTTokenizers": {
+      "Microsoft.ML.Tokenizers": {
         "type": "Direct",
-        "requested": "[1.2.0, )",
-        "resolved": "1.2.0",
-        "contentHash": "g9sA7AIvzc0lzt1JZ4XLsus67lKHcxRqYqIWCrVs/80WRLJMxeRVyGFps4ZHE4Qan1JeyKZOB5pzBvtL2SM9dQ=="
+        "requested": "[2.0.0, )",
+        "resolved": "2.0.0",
+        "contentHash": "+b8lT4cLLO/sBR2hjvE/qG6qrZG15h7/PBvnIrzTh4xDaAxdHUY6449rC+1pHzQUsBiCHZVbj+VMn+xS0sL7TA==",
+        "dependencies": {
+          "Google.Protobuf": "3.30.2"
+        }
       },
       "Nerdbank.GitVersioning": {
         "type": "Direct",
@@ -222,11 +245,23 @@
         "resolved": "3.7.115",
         "contentHash": "EpXamaAdRfG/BMxGgvZlTM0npRnkmXUjAj8OdNKd17t4oN+2nvjdv/KnFmzOOMDqvlwB49UCwtOHJrAQTfUBtQ=="
       },
-      "SharpToken": {
+      "Tokenizers.DotNet": {
         "type": "Direct",
-        "requested": "[2.0.3, )",
-        "resolved": "2.0.3",
-        "contentHash": "QFcBRPeLCL0rhW93x8zpTY0ryBk49/s1w4NY/OkyZWIZG9rBNwtwnJJZfu299d4pHM9dLBNB5ua/Y4Fj4c+hCw=="
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "uOAv3ttXMOv8OhyxdTxCCLN52EsjERhdY9jwGbncSzTbZvGzEDPQDqLkZpgD3RslwRVsv7YTXgScrEjsHnaa1w=="
+      },
+      "Tokenizers.DotNet.runtime.linux-x64": {
+        "type": "Direct",
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "1+y49KrpvOKc9QYFpSy8/Xsot6LVH6oWQ1Ne4NBcZTopvVd+9J6AbgSmZKjMK/bhYZQjF7bnYS6EaeiXP/iJ3g=="
+      },
+      "Tokenizers.DotNet.runtime.win-x64": {
+        "type": "Direct",
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "AcjRf1y5/ArFL16no9eR5Tg8HeS0CUdYfypASvszuE6+KfHXndmtnh5IeqWKnIP6F2KNSSGKXcncgXKx0RDcWQ=="
       },
       "BenchmarkDotNet.Annotations": {
         "type": "Transitive",
@@ -242,6 +277,11 @@
         "type": "Transitive",
         "resolved": "2.3.0",
         "contentHash": "2ap/rYmjtzCOT8hxrnEW/QeiOt+paD8iRrIcdKX0cxVwWLFa1e+JDBNeECakmccXrSFeBQuu5AV8SNkipFMMMw=="
+      },
+      "Google.Protobuf": {
+        "type": "Transitive",
+        "resolved": "3.30.2",
+        "contentHash": "Y2aOVLIt75yeeEWigg9V9YnjsEm53sADtLGq0gLhwaXpk3iu8tYSoauolyhenagA2sWno2TQ2WujI0HQd6s1Vw=="
       },
       "Iced": {
         "type": "Transitive",

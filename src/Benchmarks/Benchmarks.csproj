@@ -18,8 +18,10 @@
   <ItemGroup>
     <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.115" />
     <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
-    <PackageReference Include="BERTTokenizers" Version="1.2.0" />
-    <PackageReference Include="SharpToken" Version="2.0.3" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+    <PackageReference Include="Tokenizers.DotNet" Version="1.4.1" />
+    <PackageReference Include="Tokenizers.DotNet.runtime.linux-x64" Version="1.4.1" />
+    <PackageReference Include="Tokenizers.DotNet.runtime.win-x64" Version="1.4.1" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(Configuration)' == 'LocalBuild' ">

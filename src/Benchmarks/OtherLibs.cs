@@ -1,15 +1,24 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.RegularExpressions;
+using System.Text.Json.Nodes;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
-using BERTTokenizers.Base;
 using FastBertTokenizer;
+using Microsoft.ML.Tokenizers;
 using RustLibWrapper;
+using BertTokenizer = FastBertTokenizer.BertTokenizer;
 
 namespace Benchmarks;
 
+/// <summary>
+/// Compares FastBertTokenizer to other tokenizer libraries. All benchmarks tokenize the same
+/// corpus with the same vocabulary (baai-bge-small-en, which uses bert-base-uncased's vocab)
+/// and truncate to the same maximum sequence length. Note that the compared libraries don't
+/// do exactly the same work: FastBertTokenizer emits input_ids and attention_mask,
+/// Microsoft.ML.Tokenizers and Tokenizers.DotNet emit just input_ids, while the Hugging Face
+/// tokenizers library (behind RustLibWrapper and Tokenizers.DotNet) computes offsets and more.
+/// </summary>
+[Config(typeof(CompareConfig))]
 [MemoryDiagnoser]
 public class OtherLibs
 {
@@ -17,10 +26,10 @@ public class OtherLibs
     private readonly string _vocabTxtFile;
     private readonly string _tokenizerJsonPath;
     private readonly int _maxSequenceLength;
-    private ConcreteUncasedTokenizer _nmZivkovicTokenizer;
-    private string[] _corpus = null!;
-    private List<string> _nmZivkovicCorpus = null!;
     private readonly BertTokenizer _tokenizer = new();
+    private string[] _corpus = null!;
+    private Microsoft.ML.Tokenizers.BertTokenizer _mlTokenizer = null!;
+    private Tokenizers.DotNet.Tokenizer _tokenizersDotNetTokenizer = null!;
 
     public OtherLibs()
         : this("data/wiki-simple.json.br", "data/baai-bge-small-en/vocab.txt", "data/baai-bge-small-en/tokenizer.json", 512)
@@ -29,7 +38,6 @@ public class OtherLibs
 
     public OtherLibs(string corpusPath, string vocabTxtFile, string tokenizerJsonPath, int maxSequenceLength)
     {
-        _nmZivkovicTokenizer = new(vocabTxtFile);
         _corpusPath = corpusPath;
         _vocabTxtFile = vocabTxtFile;
         _tokenizerJsonPath = tokenizerJsonPath;
@@ -39,47 +47,65 @@ public class OtherLibs
     [GlobalSetup]
     public async Task SetupAsync()
     {
-        RustTokenizer.LoadTokenizer(_tokenizerJsonPath, _maxSequenceLength);
-        await _tokenizer.LoadTokenizerJsonAsync(_tokenizerJsonPath);
         _corpus = await CorpusReader.ReadBrotliJsonCorpusAsync(_corpusPath);
 
-        _nmZivkovicCorpus = new(_corpus.Length);
-        var cnt = 0;
-        foreach (var tx in _corpus)
+        await _tokenizer.LoadTokenizerJsonAsync(_tokenizerJsonPath);
+
+        RustTokenizer.LoadTokenizer(_tokenizerJsonPath, _maxSequenceLength);
+
+        // RemoveNonSpacingMarks defaults to false, but Hugging Face's BERT tokenizers strip
+        // accents when lowercasing, as do FastBertTokenizer and the tokenizer.json used here.
+        _mlTokenizer = Microsoft.ML.Tokenizers.BertTokenizer.Create(
+            _vocabTxtFile,
+            new BertOptions { RemoveNonSpacingMarks = true });
+
+        // Tokenizers.DotNet has no truncation API; the underlying Hugging Face tokenizers
+        // library only truncates if the tokenizer.json says so. Ours doesn't, so write a
+        // temporary copy with a truncation section to make the comparison fair.
+        var tokenizerJson = JsonNode.Parse(await File.ReadAllTextAsync(_tokenizerJsonPath))!;
+        tokenizerJson["truncation"] = new JsonObject
         {
-            _corpus[cnt] = tx;
-
-            // this preprocessing gives NMZivkovic/BertTokenizers kind of an unfair advantage, but it throws otherwise
-            var nmZivkovicText = tx.Substring(0, Math.Min(tx.Length, 1250)); // NMZivkovic/BertTokenizers throws if text is too long; 1250 works with 512 tokens, 1500 doesn't; 5000 works with 2048 tokens
-            nmZivkovicText = Regex.Replace(nmZivkovicText, @"\s+", " "); // required due to bad whitespace processing of NMZivkovic/BertTokenizers
-            nmZivkovicText = Regex.Replace(nmZivkovicText, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // NMZivkovic/BertTokenizers doesn't handle unknown characters
-            _nmZivkovicCorpus.Add(nmZivkovicText);
-
-            cnt++;
-        }
-
-        _nmZivkovicTokenizer = new(_vocabTxtFile);
+            ["direction"] = "Right",
+            ["max_length"] = _maxSequenceLength,
+            ["strategy"] = "LongestFirst",
+            ["stride"] = 0,
+        };
+        var truncatingTokenizerJsonPath = Path.Combine(Path.GetTempPath(), $"fastberttokenizer-bench-truncating-tokenizer.json");
+        await File.WriteAllTextAsync(truncatingTokenizerJsonPath, tokenizerJson.ToJsonString());
+        _tokenizersDotNetTokenizer = new(vocabPath: truncatingTokenizerJsonPath);
     }
 
-    [Benchmark]
-    public IReadOnlyCollection<object> NMZivkovic_BertTokenizers()
+    [Benchmark(Baseline = true)]
+    public IReadOnlyCollection<object> FastBertTokenizer()
     {
-        List<object> res = new(_nmZivkovicCorpus.Count);
-        foreach (var text in _nmZivkovicCorpus)
+        List<object> res = new(_corpus.Length);
+        foreach (var text in _corpus)
         {
-            res.Add(_nmZivkovicTokenizer.Encode(_maxSequenceLength, text));
+            res.Add(_tokenizer.Encode(text, _maxSequenceLength));
         }
 
         return res;
     }
 
     [Benchmark]
-    public IReadOnlyCollection<object> FastBertTokenizer_SameDataAsBertTokenizers()
+    public IReadOnlyCollection<object> MicrosoftMLTokenizers()
     {
-        List<object> res = new(_nmZivkovicCorpus.Count);
-        foreach (var text in _nmZivkovicCorpus)
+        List<object> res = new(_corpus.Length);
+        foreach (var text in _corpus)
         {
-            res.Add(_tokenizer.Encode(text, _maxSequenceLength));
+            res.Add(_mlTokenizer.EncodeToIds(text, _maxSequenceLength, out _, out _));
+        }
+
+        return res;
+    }
+
+    [Benchmark]
+    public IReadOnlyCollection<object> TokenizersDotNet()
+    {
+        List<object> res = new(_corpus.Length);
+        foreach (var text in _corpus)
+        {
+            res.Add(_tokenizersDotNetTokenizer.Encode(text));
         }
 
         return res;
@@ -96,13 +122,5 @@ public class OtherLibs
         }
 
         return (inputIds, attMask);
-    }
-
-    private sealed class ConcreteUncasedTokenizer : UncasedTokenizer
-    {
-        public ConcreteUncasedTokenizer(string vocabularyFilePath)
-            : base(vocabularyFilePath)
-        {
-        }
     }
 }
