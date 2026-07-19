@@ -65,15 +65,17 @@ Note that while [BERTTokenizers handles token type incorrectly](https://github.c
 
 > tl;dr: FastBertTokenizer can encode 1 GB of text in around 2 s on a typical notebook CPU from 2020 (measured multi-threaded on a ThinkPad T14s Gen 1, AMD Ryzen 7 PRO 4750U, with v1.x: ~51 ms for the ~26 MB benchmark corpus on .NET 8).
 
-The benchmark suite lives in [`src/Benchmarks`](src/Benchmarks/) and covers the different usage patterns of FastBertTokenizer (local build and released NuGet baseline, on all supported runtimes) as well as comparisons against other tokenizer libraries usable from .NET; [`src/HuggingfaceTokenizer`](src/HuggingfaceTokenizer) additionally benchmarks Hugging Face tokenizers (Rust) and [flash-tokenizer](https://github.com/NLPOptimize/flash-tokenizer) (C++) from their native ecosystems, so no interop overhead skews their numbers. [CI](https://github.com/georg-jung/FastBertTokenizer/actions/workflows/benchmark.yml) runs a quick smoke pass on every push/PR (except markdown-only changes) and the full suite on demand and monthly, uploading complete results as workflow artifacts.
+Market overview from [a full CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/29640464691) (GitHub Actions shared runner, `ubuntu-24.04`, 4 vCPUs): tokenizing 15,000 simple english wikipedia articles (3,657,145 tokens) with bert-base-uncased's vocabulary, truncated to 512 tokens per input. For FastBertTokenizer that is ~11.8m tokens/s single threaded and ~31.6m tokens/s multi threaded.
 
-Headline results from [a full CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/29640464691) on a shared GitHub Actions runner (`ubuntu-24.04`, 4 vCPUs), tokenizing 15,000 simple english wikipedia articles (3,657,145 tokens) with bert-base-uncased's vocabulary, truncated to 512 tokens per input:
+| Library                                                                            | Measured from | Single threaded | Parallel |
+|----------------------------------------------------------------------------------- |-------------- |----------------:|---------:|
+| **FastBertTokenizer**                                                              | .NET          |      **291 ms** | **116 ms** |
+| [Microsoft.ML.Tokenizers](https://www.nuget.org/packages/Microsoft.ML.Tokenizers)  | .NET          |          830 ms |        — |
+| [flash-tokenizer](https://github.com/NLPOptimize/flash-tokenizer) (C++)            | Python        |          1.12 s |   786 ms |
+| [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (HF bindings)  | .NET          |           5.2 s |        — |
+| [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) (Rust)        | Python        |          9.59 s |   4.05 s |
 
-* **FastBertTokenizer: ~11.8m tokens/s single threaded, ~31.6m tokens/s multi threaded** on the runner's 4 vCPUs.
-* Single threaded on .NET 10, same corpus: FastBertTokenizer **291 ms** — Microsoft.ML.Tokenizers **830 ms** (2.9x, 52x allocations) — Tokenizers.DotNet (Hugging Face tokenizers .NET bindings) **5.2 s** (18x).
-* Cross-language, measured from Python without .NET involved: Hugging Face tokenizers **9.6 s** single threaded / **4.1 s** batch-parallel; flash-tokenizer **1.1 s** / **0.8 s**. FastBertTokenizer needs ~0.3 s single threaded for the same corpus.
-
-All tables, the exact environment, and fairness notes (the libraries don't all do exactly the same work) are in [src/Benchmarks/README.md](src/Benchmarks/README.md#results). Shared-runner numbers are reproducible by anyone but noisier than dedicated hardware — treat small differences as noise.
+The libraries don't all do exactly the same work and cross-language numbers are only roughly comparable — see [`src/Benchmarks/README.md`](src/Benchmarks/README.md) for all detailed results (incl. FastBertTokenizer's different usage patterns and runtimes), the exact environment, fairness notes, and how to run the benchmarks yourself.
 
 ## Logo
 
