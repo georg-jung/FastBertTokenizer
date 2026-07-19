@@ -70,3 +70,11 @@ if __name__ == "__main__":
         stmt=f"tok(corpus, padding=\"longest\", max_length={MAX_LENGTH}, do_multiprocess=True)",
         setup=SETUP_FLASH,
     )
+
+    # Same as flash_tokenizer_batch but without the pure-Python attention_mask/token_type_ids
+    # construction, i.e. closer to flash-tokenizer's raw C++ tokenization speed.
+    runner.timeit(
+        name="flash_tokenizer_batch_ids_only",
+        stmt=f"tok(corpus, padding=\"longest\", max_length={MAX_LENGTH}, do_multiprocess=True, return_attention_mask=False, return_token_type_ids=False)",
+        setup=SETUP_FLASH,
+    )

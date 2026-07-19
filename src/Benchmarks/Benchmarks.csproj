@@ -39,10 +39,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HuggingfaceTokenizer\RustLibWrapper\RustLibWrapper.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="../../data/wiki-simple.json.br">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>data/wiki-simple.json.br</Link>

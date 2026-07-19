@@ -47,13 +47,6 @@ jobs:
         global-json-file: global.json
         dotnet-version: 8.0.x # runtime for the net8.0 benchmark jobs
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: |
-          src/HuggingfaceTokenizer/RustLib
-    - run: cargo build --release
-      working-directory: src/HuggingfaceTokenizer/RustLib
-
     - run: dotnet run -c Release -f net10.0 -- --smoke --filter '*'
       working-directory: src/Benchmarks
 
@@ -87,13 +80,6 @@ jobs:
       with:
         global-json-file: global.json
         dotnet-version: 8.0.x # runtime for the net8.0 benchmark jobs
-
-    - uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: |
-          src/HuggingfaceTokenizer/RustLib
-    - run: cargo build --release
-      working-directory: src/HuggingfaceTokenizer/RustLib
 
     - run: dotnet run -c Release -f net10.0 -- --filter '*'
       working-directory: src/Benchmarks
