@@ -143,6 +143,9 @@ more. Tokenizers.DotNet's number includes its per-call .NET↔Rust interop cost,
 inherent to using it from .NET; for interop-free Hugging Face tokenizers numbers see the
 cross-language results below. BlingFire does the least work of all: ids only, without
 [CLS]/[SEP], and its precompiled model agrees with Hugging Face on only ~99.9% of tokens.
+Also note that the Allocated column tracks managed GC allocations only: whatever BlingFire
+(C++) and Tokenizers.DotNet's Rust side allocate natively is invisible to BenchmarkDotNet's
+MemoryDiagnoser, so the column is only meaningful for the pure-managed libraries.
 Correctness also differs: FastBertTokenizer's output is
 [continuously tested](../FastBertTokenizer.Tests) to match Hugging Face transformers'
 `AutoTokenizer`.
