@@ -1,8 +1,10 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text;
 using System.Text.Json.Nodes;
 using BenchmarkDotNet.Attributes;
+using BlingFire;
 using FastBertTokenizer;
 using Microsoft.ML.Tokenizers;
 using BertTokenizer = FastBertTokenizer.BertTokenizer;
@@ -27,11 +29,14 @@ public class OtherLibs
     private readonly string _vocabTxtFile;
     private readonly string _tokenizerJsonPath;
     private readonly int _maxSequenceLength;
+    private const int BertBaseUncasedUnkId = 100;
     private readonly BertTokenizer _tokenizer = new();
     private string[] _corpus = null!;
     private Microsoft.ML.Tokenizers.BertTokenizer _mlTokenizer = null!;
     private Tokenizers.DotNet.Tokenizer _tokenizersDotNetTokenizer = null!;
     private string? _truncatingTokenizerJsonPath;
+    private ulong _blingFireModel;
+    private byte[] _blingFireUtf8Buffer = null!;
 
     public OtherLibs()
         : this("data/wiki-simple.json.br", "data/baai-bge-small-en/vocab.txt", "data/baai-bge-small-en/tokenizer.json", 512)
@@ -73,6 +78,11 @@ public class OtherLibs
         _truncatingTokenizerJsonPath = Path.Combine(Path.GetTempPath(), $"fastberttokenizer-bench-truncating-tokenizer-{Guid.NewGuid():N}.json");
         await File.WriteAllTextAsync(_truncatingTokenizerJsonPath, tokenizerJson.ToJsonString());
         _tokenizersDotNetTokenizer = new(vocabPath: _truncatingTokenizerJsonPath);
+
+        // BlingFire doesn't read vocab.txt; it needs its precompiled FSM for the same
+        // bert-base-uncased vocabulary. It takes utf-8 input, so reuse one buffer for that.
+        _blingFireModel = BlingFireUtils.LoadModel("data/blingfire/bert_base_tok.bin");
+        _blingFireUtf8Buffer = new byte[_corpus.Max(x => Encoding.UTF8.GetByteCount(x))];
     }
 
     [GlobalCleanup]
@@ -81,6 +91,11 @@ public class OtherLibs
         if (_truncatingTokenizerJsonPath is not null)
         {
             File.Delete(_truncatingTokenizerJsonPath);
+        }
+
+        if (_blingFireModel != 0)
+        {
+            BlingFireUtils.FreeModel(_blingFireModel);
         }
     }
 
@@ -118,5 +133,22 @@ public class OtherLibs
         }
 
         return res;
+    }
+
+    // Mind that BlingFire does less than the others here: it emits input_ids only, without
+    // [CLS]/[SEP], and its precompiled model is not built from our vocab.txt (it agrees with
+    // Hugging Face on ~99.9% of tokens per flash-tokenizer's measurements).
+    [Benchmark]
+    public object BlingFire()
+    {
+        Span<int> ids = stackalloc int[_maxSequenceLength];
+        var cnt = 0;
+        foreach (var text in _corpus)
+        {
+            var utf8Len = Encoding.UTF8.GetBytes(text.AsSpan(), _blingFireUtf8Buffer);
+            cnt += BlingFireUtils2.TextToIds(_blingFireModel, _blingFireUtf8Buffer.AsSpan(0, utf8Len), utf8Len, ids, _maxSequenceLength, BertBaseUncasedUnkId);
+        }
+
+        return cnt;
     }
 }

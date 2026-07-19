@@ -1,5 +1,5 @@
-# Checks id-level parity between Hugging Face tokenizers and flash-tokenizer on the benchmark
-# corpus, so the speed comparison in bench.py is honest about correctness differences.
+# Checks id-level parity of flash-tokenizer and tokie against Hugging Face tokenizers on the
+# benchmark corpus, so the speed comparison in bench.py is honest about correctness differences.
 #
 #   pip install -r requirements.txt
 #   python verify.py
@@ -7,6 +7,7 @@
 import json
 import sys
 
+import tokie
 from bench import CORPUS, MAX_LENGTH, TOKENIZER_JSON, VOCAB_TXT
 from flash_tokenizer import BertTokenizerFlash
 from tokenizers import Tokenizer
@@ -42,17 +43,24 @@ hf_ids = [strip_padding(enc.ids) for enc in hf.encode_batch(corpus)]
 flash_ids = flash(corpus, padding="longest", max_length=MAX_LENGTH, do_multiprocess=True).input_ids
 flash_ids = [strip_padding(ids) for ids in flash_ids]
 
-assert len(hf_ids) == len(flash_ids)
-mismatches = sum(1 for a, b in zip(hf_ids, flash_ids) if a != b)
+tk = tokie.Tokenizer.from_json(TOKENIZER_JSON)
+tk.enable_truncation(MAX_LENGTH)
+tokie_ids = [enc.ids for enc in tk.encode_batch(corpus)]
+
+assert len(hf_ids) == len(flash_ids) == len(tokie_ids)
+flash_mismatches = sum(1 for a, b in zip(hf_ids, flash_ids) if a != b)
+tokie_mismatches = sum(1 for a, b in zip(hf_ids, tokie_ids) if a != b)
 total_tokens_hf = sum(len(x) for x in hf_ids)
 total_tokens_flash = sum(len(x) for x in flash_ids)
 
-mismatch_rate = mismatches / len(corpus)
+flash_mismatch_rate = flash_mismatches / len(corpus)
+tokie_mismatch_rate = tokie_mismatches / len(corpus)
 print(f"documents:                    {len(corpus)}")
 print(f"total tokens (hf tokenizers): {total_tokens_hf}")
 print(f"total tokens (flash):         {total_tokens_flash}")
-print(f"documents with id mismatch:   {mismatches} ({mismatch_rate:.2%})")
+print(f"flash docs with id mismatch:  {flash_mismatches} ({flash_mismatch_rate:.2%})")
+print(f"tokie docs with id mismatch:  {tokie_mismatches} ({tokie_mismatch_rate:.2%})")
 
-if mismatch_rate > MAX_MISMATCH_RATE:
+if max(flash_mismatch_rate, tokie_mismatch_rate) > MAX_MISMATCH_RATE:
     print(f"FAIL: mismatch rate exceeds the expected maximum of {MAX_MISMATCH_RATE:.2%}")
     sys.exit(1)

@@ -8,18 +8,22 @@ BenchmarkDotNet-based benchmarks of FastBertTokenizer. Two suites:
   each on all supported (non-EOL) runtimes. This answers "did my change make it faster?"
   and "is the next release faster than the current one?".
 * **`OtherLibs`** compares FastBertTokenizer against other tokenizer libraries usable
-  from .NET: [Microsoft.ML.Tokenizers](https://www.nuget.org/packages/Microsoft.ML.Tokenizers)
-  and [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (bindings for
-  Hugging Face's Rust tokenizers).
+  from .NET: [Microsoft.ML.Tokenizers](https://www.nuget.org/packages/Microsoft.ML.Tokenizers),
+  [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (bindings for
+  Hugging Face's Rust tokenizers) and [BlingFire](https://github.com/microsoft/BlingFire)
+  (Microsoft's C++ tokenizer, unmaintained since ~2021 but historically the fastest BERT
+  tokenizer consumable from .NET; it doesn't read vocab.txt — its precompiled
+  bert-base-uncased model ships in `data/blingfire/`).
 
 Tokenizers that are not natively usable from .NET are benchmarked from their own
 ecosystems instead, so interop overhead doesn't skew their numbers:
 
 * [`../HuggingfaceTokenizer/BenchPython`](../HuggingfaceTokenizer/BenchPython) measures
-  [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) (Rust core) and
-  [flash-tokenizer](https://github.com/NLPOptimize/flash-tokenizer) (C++ core) through
-  their Python APIs — the way virtually all of their users consume them. It also contains
-  an id-level parity check between the two (`verify.py`).
+  [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) (Rust core),
+  [flash-tokenizer](https://github.com/NLPOptimize/flash-tokenizer) (C++ core) and
+  [tokie](https://github.com/chonkie-inc/tokie) (Rust core) through their Python APIs —
+  the way virtually all of their users consume them. It also contains an id-level parity
+  check against Hugging Face tokenizers (`verify.py`).
 * [`../HuggingfaceTokenizer/BenchRust`](../HuggingfaceTokenizer/BenchRust) measures
   Hugging Face tokenizers natively via criterion.rs, without any FFI or Python overhead.
 
@@ -137,9 +141,13 @@ input_ids and attention_mask, Microsoft.ML.Tokenizers and Tokenizers.DotNet emit
 input_ids, and Hugging Face tokenizers (behind Tokenizers.DotNet) computes offsets and
 more. Tokenizers.DotNet's number includes its per-call .NET↔Rust interop cost, which is
 inherent to using it from .NET; for interop-free Hugging Face tokenizers numbers see the
-cross-language results below. Correctness also differs: FastBertTokenizer's output is
+cross-language results below. BlingFire does the least work of all: ids only, without
+[CLS]/[SEP], and its precompiled model agrees with Hugging Face on only ~99.9% of tokens.
+Correctness also differs: FastBertTokenizer's output is
 [continuously tested](../FastBertTokenizer.Tests) to match Hugging Face transformers'
 `AutoTokenizer`.
+
+*BlingFire was added after the run above; its numbers land with the next full benchmark run.*
 
 ### Cross-language: Hugging Face tokenizers (Rust) and flash-tokenizer (C++)
 
@@ -158,6 +166,11 @@ The single-threaded Hugging Face number includes considerable per-call Python ov
 Rust core is much faster, as the batch mode shows — and `BenchRust` measures it without any
 Python involved). flash-tokenizer's batch number includes its pure-Python
 attention_mask/token_type_ids construction; `flash_tokenizer_batch_ids_only` measures it
-without that. An id-level parity check (`verify.py`) shows flash-tokenizer produces ids
-identical to Hugging Face tokenizers for 99.6% of the corpus documents. For scale:
-FastBertTokenizer tokenizes the same corpus single threaded in ~0.3 s on the same runner.
+without that. tokie may parallelize internally even for single calls, so read its
+`tokie_sequential_calls` number as "sequential API calls", not necessarily "one core".
+An id-level parity check (`verify.py`) shows flash-tokenizer produces ids identical to
+Hugging Face tokenizers for 99.6% of the corpus documents, while tokie matches exactly.
+For scale: FastBertTokenizer tokenizes the same corpus single threaded in ~0.3 s on the
+same runner.
+
+*tokie was added after the run above; its numbers land with the next full benchmark run.*

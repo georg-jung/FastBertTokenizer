@@ -38,12 +38,20 @@ tok = BertTokenizerFlash({VOCAB_TXT!r}, do_lower_case=True, model_max_length={MA
 tok(corpus[:100], padding="longest", max_length={MAX_LENGTH}, do_multiprocess=True)
 """
 
+SETUP_TOKIE = SETUP_CORPUS + f"""
+from tokie import Tokenizer
+tok = Tokenizer.from_json({TOKENIZER_JSON!r})
+tok.enable_truncation({MAX_LENGTH})
+"""
+
 if __name__ == "__main__":
     import pyperf
 
     runner = pyperf.Runner()
 
-    # Single-text loops: effectively single-threaded for both libraries.
+    # Single-text loops. Effectively single-threaded for hf tokenizers and flash-tokenizer;
+    # tokie may parallelize internally even for single calls (SIMD chunk splitting), so read
+    # its number as "sequential API calls", not necessarily "one core".
     runner.timeit(
         name="hf_tokenizers_singlethreaded",
         stmt="for text in corpus:\n    tok.encode(text)",
@@ -53,6 +61,11 @@ if __name__ == "__main__":
         name="flash_tokenizer_singlethreaded",
         stmt=f"for text in corpus:\n    tok(text, padding=\"longest\", max_length={MAX_LENGTH})",
         setup=SETUP_FLASH,
+    )
+    runner.timeit(
+        name="tokie_sequential_calls",
+        stmt="for text in corpus:\n    tok.encode(text)",
+        setup=SETUP_TOKIE,
     )
 
     # Batch mode: both libraries run their native tokenizers in parallel (Rust/rayon vs. C++
@@ -77,4 +90,9 @@ if __name__ == "__main__":
         name="flash_tokenizer_batch_ids_only",
         stmt=f"tok(corpus, padding=\"longest\", max_length={MAX_LENGTH}, do_multiprocess=True, return_attention_mask=False, return_token_type_ids=False)",
         setup=SETUP_FLASH,
+    )
+    runner.timeit(
+        name="tokie_batch",
+        stmt="tok.encode_batch(corpus)",
+        setup=SETUP_TOKIE,
     )

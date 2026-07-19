@@ -75,7 +75,7 @@ Market overview from [a full CI run](https://github.com/georg-jung/FastBertToken
 | [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (HF bindings)  | .NET          |           5.2 s |        — |
 | [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) (Rust)        | Python        |          9.59 s |   4.05 s |
 
-The libraries don't all do exactly the same work and cross-language numbers are only roughly comparable — see [`src/Benchmarks/README.md`](src/Benchmarks/README.md) for all detailed results (incl. FastBertTokenizer's different usage patterns and runtimes), the exact environment, fairness notes, and how to run the benchmarks yourself.
+The libraries don't all do exactly the same work and cross-language numbers are only roughly comparable — see [`src/Benchmarks/README.md`](src/Benchmarks/README.md) for all detailed results (incl. FastBertTokenizer's different usage patterns and runtimes), the exact environment, fairness notes, and how to run the benchmarks yourself. [BlingFire](https://github.com/microsoft/BlingFire) (Microsoft, C++) and [tokie](https://github.com/chonkie-inc/tokie) (Rust) were recently added to the suites; their numbers land with the next full benchmark run.
 
 ## Logo
 
