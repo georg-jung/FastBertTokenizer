@@ -105,8 +105,13 @@ public partial class BertTokenizer
         var sepToken = sepSpecialToken.Id;
         var padToken = "[PAD]"; // In e.g. https://huggingface.co/bert-base-uncased/raw/main/tokenizer.json there is no nice way to detect this.
 
+#if NET9_0_OR_GREATER
+        var prefixes = new Dictionary<string, long>();
+        var suffixes = new Dictionary<string, long>();
+#else
         var prefixes = new Dictionary<StringSpanOrdinalKey, long>();
         var suffixes = new Dictionary<StringSpanOrdinalKey, long>();
+#endif
         (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
 
         void HandleLine(string line, int tokenId)
@@ -118,7 +123,7 @@ public partial class BertTokenizer
 
             if (line.StartsWith(suffixPrefix, StringComparison.Ordinal))
             {
-                suffixes[new(line[suffixPrefix.Length..])] = tokenId;
+                suffixes[line[suffixPrefix.Length..]] = tokenId;
                 return;
             }
 
@@ -139,7 +144,7 @@ public partial class BertTokenizer
                 padId = tokenId;
             }
 
-            prefixes[new(line)] = tokenId;
+            prefixes[line] = tokenId;
         }
 
         foreach (var (token, id) in tok.Model.Vocab)
@@ -157,7 +162,7 @@ public partial class BertTokenizer
             }
 
             // This does not seem to be required in all cases, e.g. [CLS] with bert-base-uncased, but required in others, e.g. 21.22 with issue #100 tokenizer.
-            prefixes[new(addedToken.Content)] = addedToken.Id;
+            prefixes[addedToken.Content] = addedToken.Id;
         }
 
         _addedTokens = new(tok.AddedTokens.Select(x => (x.Content, x.Normalized)).OrderByDescending(x => x.Content.Length));
@@ -168,6 +173,10 @@ public partial class BertTokenizer
 #else
         _prefixes = prefixes;
         _suffixes = suffixes;
+#endif
+#if NET9_0_OR_GREATER
+        _prefixLookup = _prefixes.GetAlternateLookup<ReadOnlySpan<char>>();
+        _suffixLookup = _suffixes.GetAlternateLookup<ReadOnlySpan<char>>();
 #endif
         _lowercaseInput = tok.Normalizer.Lowercase;
 

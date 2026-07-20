@@ -7,6 +7,7 @@ using System.Collections.Frozen;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 #if !NETSTANDARD2_0
 using System.Threading.Channels;
@@ -20,7 +21,12 @@ namespace FastBertTokenizer;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1204:Static elements should appear before instance elements", Justification = "Have private overload close to public one.")]
 public partial class BertTokenizer
 {
-#if NET8_0_OR_GREATER
+#if NET9_0_OR_GREATER
+    private FrozenDictionary<string, long>? _prefixes;
+    private FrozenDictionary<string, long>? _suffixes;
+    private FrozenDictionary<string, long>.AlternateLookup<ReadOnlySpan<char>> _prefixLookup;
+    private FrozenDictionary<string, long>.AlternateLookup<ReadOnlySpan<char>> _suffixLookup;
+#elif NET8_0_OR_GREATER
     private FrozenDictionary<StringSpanOrdinalKey, long>? _prefixes;
     private FrozenDictionary<StringSpanOrdinalKey, long>? _suffixes;
 #else
@@ -548,10 +554,9 @@ public partial class BertTokenizer
         var cnt = 0;
         long id = -1;
 
-        // ToDo: Remove string allocation; related: https://github.com/dotnet/runtime/issues/27229
         while (prefix.Length > 0)
         {
-            if (_prefixes!.TryGetValue(prefix, out var outId))
+            if (TryGetPrefixId(prefix, out var outId))
             {
                 id = outId;
                 break;
@@ -575,10 +580,9 @@ public partial class BertTokenizer
             var suffix = remaining;
             id = -1;
 
-            // ToDo: Remove string allocation; related: https://github.com/dotnet/runtime/issues/27229
             while (suffix.Length > 0)
             {
-                if (_suffixes!.TryGetValue(suffix, out var outId))
+                if (TryGetSuffixId(suffix, out var outId))
                 {
                     id = outId;
                     break;
@@ -599,5 +603,25 @@ public partial class BertTokenizer
         }
 
         return cnt;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TryGetPrefixId(ReadOnlySpan<char> prefix, out long id)
+    {
+#if NET9_0_OR_GREATER
+        return _prefixLookup.TryGetValue(prefix, out id);
+#else
+        return _prefixes!.TryGetValue(prefix, out id);
+#endif
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TryGetSuffixId(ReadOnlySpan<char> suffix, out long id)
+    {
+#if NET9_0_OR_GREATER
+        return _suffixLookup.TryGetValue(suffix, out id);
+#else
+        return _suffixes!.TryGetValue(suffix, out id);
+#endif
     }
 }

@@ -16,6 +16,10 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+  # Safety net for slow testhost startup on busy runners. The default 90 s window was
+  # repeatedly missed while test TFMs still ran in parallel; they run sequentially now
+  # (see TestTfmsInParallel below), but keep the headroom in case a runner crawls.
+  VSTEST_CONNECTION_TIMEOUT: 300
 
 jobs:
   build:
@@ -51,9 +55,13 @@ jobs:
     - run: dotnet restore /p:ContinuousIntegrationBuild=true
     - run: dotnet build -c Release --no-restore /p:ContinuousIntegrationBuild=true
 
+    # TestTfmsInParallel=false: with three test TFMs, concurrently starting testhosts
+    # (each loading the benchmark corpus plus coverage instrumentation) exhausted the
+    # runner's resources — testhosts randomly failed to start or died mid-run.
     - run: >
         dotnet test
         -c Release --no-restore --no-build
+        -p:TestTfmsInParallel=false
         /p:ContinuousIntegrationBuild=true
         /p:CoverletOutputFormat=opencover
         -s CodeCoverage.runsettings
