@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -13,30 +13,33 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <!-- The FastBertTokenizer reference differs between LocalBuild (project) and other
+         configurations (NuGet baseline package), so a lock file can never be consistent
+         with both and locked-mode CI restores fail with NU1004 for one of them. -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <RestoreLockedMode>false</RestoreLockedMode>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.115" />
-    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" />
-    <PackageReference Include="BERTTokenizers" Version="1.2.0" />
-    <PackageReference Include="SharpToken" Version="2.0.3" />
-    <PackageReference Include="System.Interactive" Version="6.0.1" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageReference Include="BlingFireNuget" Version="0.1.8" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+    <PackageReference Include="Tokenizers.DotNet" Version="1.4.1" />
+    <PackageReference Include="Tokenizers.DotNet.runtime.linux-x64" Version="1.4.1" />
+    <PackageReference Include="Tokenizers.DotNet.runtime.win-x64" Version="1.4.1" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(Configuration)' == 'LocalBuild' ">
     <ProjectReference Include="..\FastBertTokenizer\FastBertTokenizer.csproj" />
   </ItemGroup>
 
+  <!-- Keep this version in sync with BenchmarkDefaults.BaselineNuGetVersion in BenchmarkConfigs.cs. -->
   <ItemGroup Condition=" '$(Configuration)' != 'LocalBuild' ">
-    <PackageReference Include="FastBertTokenizer" Version="0.5.18-alpha" />
+    <PackageReference Include="FastBertTokenizer" Version="1.0.28" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HuggingfaceTokenizer\RustLibWrapper\RustLibWrapper.csproj" />
-  </ItemGroup>
-
-    <ItemGroup>
     <None Include="../../data/wiki-simple.json.br">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>data/wiki-simple.json.br</Link>
@@ -48,6 +51,10 @@
     <None Include="../../data/baai-bge-small-en/tokenizer.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>data/baai-bge-small-en/tokenizer.json</Link>
+    </None>
+    <None Include="../../data/blingfire/bert_base_tok.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>data/blingfire/bert_base_tok.bin</Link>
     </None>
   </ItemGroup>
 

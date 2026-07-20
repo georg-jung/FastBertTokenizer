@@ -1,15 +1,28 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.RegularExpressions;
+using System.Text;
+using System.Text.Json.Nodes;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
-using BERTTokenizers.Base;
+using BlingFire;
 using FastBertTokenizer;
-using RustLibWrapper;
+using Microsoft.ML.Tokenizers;
+using BertTokenizer = FastBertTokenizer.BertTokenizer;
 
 namespace Benchmarks;
 
+/// <summary>
+/// Compares FastBertTokenizer to other tokenizer libraries usable from .NET. All benchmarks
+/// tokenize the same corpus with the same vocabulary (baai-bge-small-en, which uses
+/// bert-base-uncased's vocab) and truncate to the same maximum sequence length. Note that the
+/// compared libraries don't do exactly the same work: FastBertTokenizer emits input_ids and
+/// attention_mask, Microsoft.ML.Tokenizers and Tokenizers.DotNet emit just input_ids, while
+/// the Hugging Face tokenizers library (behind Tokenizers.DotNet) computes offsets and more.
+/// Tokenizers that aren't natively usable from .NET are benchmarked from their own ecosystems
+/// in ../HuggingfaceTokenizer/BenchPython and ../HuggingfaceTokenizer/BenchRust instead, so
+/// .NET interop cost doesn't skew their numbers.
+/// </summary>
+[Config(typeof(CompareConfig))]
 [MemoryDiagnoser]
 public class OtherLibs
 {
@@ -17,10 +30,14 @@ public class OtherLibs
     private readonly string _vocabTxtFile;
     private readonly string _tokenizerJsonPath;
     private readonly int _maxSequenceLength;
-    private ConcreteUncasedTokenizer _nmZivkovicTokenizer;
-    private string[] _corpus = null!;
-    private List<string> _nmZivkovicCorpus = null!;
+    private const int BertBaseUncasedUnkId = 100;
     private readonly BertTokenizer _tokenizer = new();
+    private string[] _corpus = null!;
+    private Microsoft.ML.Tokenizers.BertTokenizer _mlTokenizer = null!;
+    private Tokenizers.DotNet.Tokenizer _tokenizersDotNetTokenizer = null!;
+    private string? _truncatingTokenizerJsonPath;
+    private ulong _blingFireModel;
+    private byte[] _blingFireUtf8Buffer = null!;
 
     public OtherLibs()
         : this("data/wiki-simple.json.br", "data/baai-bge-small-en/vocab.txt", "data/baai-bge-small-en/tokenizer.json", 512)
@@ -29,7 +46,6 @@ public class OtherLibs
 
     public OtherLibs(string corpusPath, string vocabTxtFile, string tokenizerJsonPath, int maxSequenceLength)
     {
-        _nmZivkovicTokenizer = new(vocabTxtFile);
         _corpusPath = corpusPath;
         _vocabTxtFile = vocabTxtFile;
         _tokenizerJsonPath = tokenizerJsonPath;
@@ -39,45 +55,56 @@ public class OtherLibs
     [GlobalSetup]
     public async Task SetupAsync()
     {
-        RustTokenizer.LoadTokenizer(_tokenizerJsonPath, _maxSequenceLength);
-        await _tokenizer.LoadTokenizerJsonAsync(_tokenizerJsonPath);
         _corpus = await CorpusReader.ReadBrotliJsonCorpusAsync(_corpusPath);
 
-        _nmZivkovicCorpus = new(_corpus.Length);
-        var cnt = 0;
-        foreach (var tx in _corpus)
+        await _tokenizer.LoadTokenizerJsonAsync(_tokenizerJsonPath);
+
+        // RemoveNonSpacingMarks defaults to false, but Hugging Face's BERT tokenizers strip
+        // accents when lowercasing, as do FastBertTokenizer and the tokenizer.json used here.
+        _mlTokenizer = Microsoft.ML.Tokenizers.BertTokenizer.Create(
+            _vocabTxtFile,
+            new BertOptions { RemoveNonSpacingMarks = true });
+
+        // Tokenizers.DotNet has no truncation API; the underlying Hugging Face tokenizers
+        // library only truncates if the tokenizer.json says so. Ours doesn't, so write a
+        // temporary copy with a truncation section to make the comparison fair.
+        var tokenizerJson = JsonNode.Parse(await File.ReadAllTextAsync(_tokenizerJsonPath))!;
+        tokenizerJson["truncation"] = new JsonObject
         {
-            _corpus[cnt] = tx;
+            ["direction"] = "Right",
+            ["max_length"] = _maxSequenceLength,
+            ["strategy"] = "LongestFirst",
+            ["stride"] = 0,
+        };
+        _truncatingTokenizerJsonPath = Path.Combine(Path.GetTempPath(), $"fastberttokenizer-bench-truncating-tokenizer-{Guid.NewGuid():N}.json");
+        await File.WriteAllTextAsync(_truncatingTokenizerJsonPath, tokenizerJson.ToJsonString());
+        _tokenizersDotNetTokenizer = new(vocabPath: _truncatingTokenizerJsonPath);
 
-            // this preprocessing gives NMZivkovic/BertTokenizers kind of an unfair advantage, but it throws otherwise
-            var nmZivkovicText = tx.Substring(0, Math.Min(tx.Length, 1250)); // NMZivkovic/BertTokenizers throws if text is too long; 1250 works with 512 tokens, 1500 doesn't; 5000 works with 2048 tokens
-            nmZivkovicText = Regex.Replace(nmZivkovicText, @"\s+", " "); // required due to bad whitespace processing of NMZivkovic/BertTokenizers
-            nmZivkovicText = Regex.Replace(nmZivkovicText, @"[^A-Za-z0-9\s\.\,;:\\/?!#$%()=+\-*\""'–_`<>&^@{}[\]\|~']+", string.Empty); // NMZivkovic/BertTokenizers doesn't handle unknown characters
-            _nmZivkovicCorpus.Add(nmZivkovicText);
-
-            cnt++;
-        }
-
-        _nmZivkovicTokenizer = new(_vocabTxtFile);
+        // BlingFire doesn't read vocab.txt; it needs its precompiled FSM for the same
+        // bert-base-uncased vocabulary. It takes utf-8 input, so reuse one buffer for that.
+        _blingFireModel = BlingFireUtils.LoadModel("data/blingfire/bert_base_tok.bin");
+        _blingFireUtf8Buffer = new byte[_corpus.Max(x => Encoding.UTF8.GetByteCount(x))];
     }
 
-    [Benchmark]
-    public IReadOnlyCollection<object> NMZivkovic_BertTokenizers()
+    [GlobalCleanup]
+    public void Cleanup()
     {
-        List<object> res = new(_nmZivkovicCorpus.Count);
-        foreach (var text in _nmZivkovicCorpus)
+        if (_truncatingTokenizerJsonPath is not null)
         {
-            res.Add(_nmZivkovicTokenizer.Encode(_maxSequenceLength, text));
+            File.Delete(_truncatingTokenizerJsonPath);
         }
 
-        return res;
+        if (_blingFireModel != 0)
+        {
+            BlingFireUtils.FreeModel(_blingFireModel);
+        }
     }
 
-    [Benchmark]
-    public IReadOnlyCollection<object> FastBertTokenizer_SameDataAsBertTokenizers()
+    [Benchmark(Baseline = true)]
+    public IReadOnlyCollection<object> FastBertTokenizer()
     {
-        List<object> res = new(_nmZivkovicCorpus.Count);
-        foreach (var text in _nmZivkovicCorpus)
+        List<object> res = new(_corpus.Length);
+        foreach (var text in _corpus)
         {
             res.Add(_tokenizer.Encode(text, _maxSequenceLength));
         }
@@ -86,23 +113,43 @@ public class OtherLibs
     }
 
     [Benchmark]
-    public object RustHuggingfaceWrapperSinglethreadedMemReuse()
+    public IReadOnlyCollection<object> MicrosoftMLTokenizers()
     {
-        var inputIds = new uint[_maxSequenceLength];
-        var attMask = new uint[_maxSequenceLength];
+        List<object> res = new(_corpus.Length);
         foreach (var text in _corpus)
         {
-            RustTokenizer.TokenizeAndGetIds(text, inputIds.AsSpan(), attMask.AsSpan());
+            res.Add(_mlTokenizer.EncodeToIds(text, _maxSequenceLength, out _, out _));
         }
 
-        return (inputIds, attMask);
+        return res;
     }
 
-    private sealed class ConcreteUncasedTokenizer : UncasedTokenizer
+    [Benchmark]
+    public IReadOnlyCollection<object> TokenizersDotNet()
     {
-        public ConcreteUncasedTokenizer(string vocabularyFilePath)
-            : base(vocabularyFilePath)
+        List<object> res = new(_corpus.Length);
+        foreach (var text in _corpus)
         {
+            res.Add(_tokenizersDotNetTokenizer.Encode(text));
         }
+
+        return res;
+    }
+
+    // Mind that BlingFire does less than the others here: it emits input_ids only, without
+    // [CLS]/[SEP], and its precompiled model is not built from our vocab.txt (it agrees with
+    // Hugging Face on ~99.9% of tokens per flash-tokenizer's measurements).
+    [Benchmark]
+    public object BlingFire()
+    {
+        Span<int> ids = stackalloc int[_maxSequenceLength];
+        var cnt = 0;
+        foreach (var text in _corpus)
+        {
+            var utf8Len = Encoding.UTF8.GetBytes(text.AsSpan(), _blingFireUtf8Buffer);
+            cnt += BlingFireUtils2.TextToIds(_blingFireModel, _blingFireUtf8Buffer.AsSpan(0, utf8Len), utf8Len, ids, _maxSequenceLength, BertBaseUncasedUnkId);
+        }
+
+        return cnt;
     }
 }

@@ -15,7 +15,14 @@
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <PackageVersion Include="FastBertTokenizer" Version="1.0.12-beta" />
+    <!-- Referenced explicitly by net48-targeting projects: whether the SDK injects this
+         automatically depends on OS and SDK version, which breaks locked-mode restore
+         (NU1004) when packages.lock.json was generated in a different environment. -->
+    <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
+    <!-- Benchmark baseline; keep in sync with Benchmarks.csproj and BenchmarkDefaults.BaselineNuGetVersion.
+         BenchmarkDotNet's auto-generated projects live under bin/ and thus resolve this centrally pinned
+         version; a mismatch with the version referenced by Benchmarks.csproj fails their restore (NU1109). -->
+    <PackageVersion Include="FastBertTokenizer" Version="1.0.28" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="2.4.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

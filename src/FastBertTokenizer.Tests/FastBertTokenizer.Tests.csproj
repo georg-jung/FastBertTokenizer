@@ -36,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net48' ">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="all" />
     <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
 
