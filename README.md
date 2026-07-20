@@ -49,17 +49,7 @@ Console.WriteLine(decoded);
 
 [*example project*](src/examples/QuickStart/)
 
-## Comparison to [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers)
-
-* about 1 order of magnitude faster (measured with FastBertTokenizer v1.x and its benchmark suite)
-* allocates more than 1 order of magnitude less memory
-* [better whitespace handling](https://github.com/NMZivkovic/BertTokenizers/issues/24)
-* [handles unknown characters correctly](https://github.com/NMZivkovic/BertTokenizers/issues/26)
-* [does not throw if text is longer than maximum sequence length](https://github.com/NMZivkovic/BertTokenizers/issues/18)
-* handles unicode control chars
-* handles other alphabets such as greek and right-to-left languages
-
-Note that while [BERTTokenizers handles token type incorrectly](https://github.com/NMZivkovic/BertTokenizers/issues/18), it does support input of two pieces of text that are tokenized with a separator in between. *FastBertTokenizer* currently does not support this.
+Note: FastBertTokenizer currently does not support encoding two pieces of text into a single input with a separator in between and corresponding token_type_ids, as some models (e.g. cross-encoders) expect.
 
 ## Speed / Benchmarks
 
