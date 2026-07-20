@@ -51,7 +51,7 @@ Console.WriteLine(decoded);
 
 ## Comparison to [BERTTokenizers](https://github.com/NMZivkovic/BertTokenizers)
 
-* about 1 order of magnitude faster
+* about 1 order of magnitude faster (measured with FastBertTokenizer v1.x and its benchmark suite)
 * allocates more than 1 order of magnitude less memory
 * [better whitespace handling](https://github.com/NMZivkovic/BertTokenizers/issues/24)
 * [handles unknown characters correctly](https://github.com/NMZivkovic/BertTokenizers/issues/26)
@@ -77,7 +77,7 @@ Market overview from [a full CI run](https://github.com/georg-jung/FastBertToken
 | [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (HF bindings)  | .NET          |          5.31 s |        — |
 | [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) (Rust)        | Python        |          9.13 s |   4.10 s |
 
-The libraries don't all do exactly the same work and cross-language numbers are only roughly comparable — see [`src/Benchmarks/README.md`](src/Benchmarks/README.md) for all detailed results (incl. FastBertTokenizer's different usage patterns and runtimes), the exact environment, fairness notes, and how to run the benchmarks yourself.
+The libraries don't all do exactly the same work and cross-language numbers are only roughly comparable: e.g. Hugging Face tokenizers' single-threaded number includes per-call Python overhead, and tokie may use multiple cores even for sequential calls. See [`src/Benchmarks/README.md`](src/Benchmarks/README.md) for all detailed results (incl. FastBertTokenizer's different usage patterns and runtimes), the exact environment, fairness notes, and how to run the benchmarks yourself.
 
 ## Logo
 

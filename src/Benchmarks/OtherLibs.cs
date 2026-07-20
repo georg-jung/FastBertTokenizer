@@ -18,8 +18,9 @@ namespace Benchmarks;
 /// compared libraries don't do exactly the same work: FastBertTokenizer emits input_ids and
 /// attention_mask, Microsoft.ML.Tokenizers and Tokenizers.DotNet emit just input_ids, while
 /// the Hugging Face tokenizers library (behind Tokenizers.DotNet) computes offsets and more.
-/// For interop-free numbers of non-.NET tokenizers see the cross-language benchmarks in
-/// ../HuggingfaceTokenizer/BenchPython and ../HuggingfaceTokenizer/BenchRust.
+/// Tokenizers that aren't natively usable from .NET are benchmarked from their own ecosystems
+/// in ../HuggingfaceTokenizer/BenchPython and ../HuggingfaceTokenizer/BenchRust instead, so
+/// .NET interop cost doesn't skew their numbers.
 /// </summary>
 [Config(typeof(CompareConfig))]
 [MemoryDiagnoser]

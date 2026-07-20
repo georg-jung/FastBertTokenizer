@@ -11,8 +11,8 @@ BenchmarkDotNet-based benchmarks of FastBertTokenizer. Two suites:
   from .NET: [Microsoft.ML.Tokenizers](https://www.nuget.org/packages/Microsoft.ML.Tokenizers),
   [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (bindings for
   Hugging Face's Rust tokenizers) and [BlingFire](https://github.com/microsoft/BlingFire)
-  (Microsoft's C++ tokenizer, unmaintained since ~2021 but historically the fastest BERT
-  tokenizer consumable from .NET; it doesn't read vocab.txt — its precompiled
+  (Microsoft's C++ tokenizer, unmaintained since ~2021 but long the go-to fast BERT
+  tokenizer for .NET; it doesn't read vocab.txt — its precompiled
   bert-base-uncased model ships in `data/blingfire/`).
 
 Tokenizers that are not natively usable from .NET are benchmarked from their own
@@ -127,6 +127,7 @@ AMD EPYC 9V74 2.60GHz, 1 CPU, 4 logical and 2 physical cores (GitHub Actions sha
 
 * [Microsoft.ML.Tokenizers](https://www.nuget.org/packages/Microsoft.ML.Tokenizers)' `BertTokenizer` (v2.0.0)
 * [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (v1.4.1), .NET bindings for Hugging Face's Rust [tokenizers](https://github.com/huggingface/tokenizers)
+* [BlingFire](https://github.com/microsoft/BlingFire) (v0.1.8), Microsoft's C++ tokenizer with an official .NET package
 
 All single threaded on .NET 10, same environment and run as above:
 
@@ -141,9 +142,11 @@ Fairness notes: the libraries don't do exactly the same work — FastBertTokeniz
 input_ids and attention_mask, Microsoft.ML.Tokenizers and Tokenizers.DotNet emit just
 input_ids, and Hugging Face tokenizers (behind Tokenizers.DotNet) computes offsets and
 more. Tokenizers.DotNet's number includes its per-call .NET↔Rust interop cost, which is
-inherent to using it from .NET; for interop-free Hugging Face tokenizers numbers see the
-cross-language results below. BlingFire does the least work of all: ids only, without
-[CLS]/[SEP], and its precompiled model agrees with Hugging Face on only ~99.9% of tokens.
+inherent to using it from .NET; for Hugging Face tokenizers numbers without .NET interop
+see the cross-language results below (Python-driven — a fully native measurement is
+possible via `BenchRust`, whose results are not included in these tables). BlingFire does
+the least work of all: ids only, without [CLS]/[SEP], and its precompiled model agrees
+with Hugging Face on ~99.9% of tokens rather than exactly.
 Also note that the Allocated column tracks managed GC allocations only: whatever BlingFire
 (C++) and Tokenizers.DotNet's Rust side allocate natively is invisible to BenchmarkDotNet's
 MemoryDiagnoser, so the column is only meaningful for the pure-managed libraries.
@@ -151,7 +154,7 @@ Correctness also differs: FastBertTokenizer's output is
 [continuously tested](../FastBertTokenizer.Tests) to match Hugging Face transformers'
 `AutoTokenizer`.
 
-### Cross-language: Hugging Face tokenizers (Rust) and flash-tokenizer (C++)
+### Cross-language: Hugging Face tokenizers (Rust), flash-tokenizer (C++) and tokie (Rust)
 
 From the [same CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/29692334350)
 (Python 3.12, tokenizers 0.23.1, flash-tokenizer 1.2.0, tokie 0.0.10), measured from Python — the way
@@ -167,13 +170,14 @@ virtually all users of these libraries consume them — tokenizing the full corp
 | flash_tokenizer_batch_ids_only   |    489 ms ± 2 |
 | tokie_batch (parallel)           |    634 ms ± 5 |
 
-The single-threaded Hugging Face number includes considerable per-call Python overhead (its
-Rust core is much faster, as the batch mode shows — and `BenchRust` measures it without any
-Python involved). flash-tokenizer's batch number includes its pure-Python
+The single-threaded Hugging Face number includes per-call Python overhead; the batch mode
+amortizes that and additionally parallelizes across documents, so these numbers don't
+isolate the Rust core's raw speed (`BenchRust` can measure that natively, but its results
+are not included in these tables). flash-tokenizer's batch number includes its pure-Python
 attention_mask/token_type_ids construction; `flash_tokenizer_batch_ids_only` measures it
 without that. tokie may parallelize internally even for single calls, so read its
 `tokie_sequential_calls` number as "sequential API calls", not necessarily "one core".
 An id-level parity check (`verify.py`) shows flash-tokenizer produces ids identical to
 Hugging Face tokenizers for 99.6% of the corpus documents, while tokie matches exactly.
-For scale: FastBertTokenizer tokenizes the same corpus single threaded in ~0.3 s on the
-same runner.
+For scale: FastBertTokenizer tokenizes the same corpus single threaded in ~0.3 s in the
+same CI run (tables above).
