@@ -16,6 +16,9 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+  # Three test TFMs (net10.0/net8.0/net48) start testhosts concurrently; the slow-starting
+  # net48 testhost repeatedly missed vstest's default 90 s connection window on busy runners.
+  VSTEST_CONNECTION_TIMEOUT: 300
 
 jobs:
   build:
