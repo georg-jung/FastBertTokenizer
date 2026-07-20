@@ -5,7 +5,7 @@
 mostly copied from https://github.com/dotnet/machinelearning/blob/72cfdf611a510ba0570170a708ddcc1a1928f329/src/Microsoft.ML.Tokenizers/Utils/StringSpanOrdinalKey.cs
 */
 
-// On .NET 9+ this whole construct is replaced by Dictionary<string, long>.GetAlternateLookup<ReadOnlySpan<char>>().
+// On .NET 9+ this whole construct is replaced by FrozenDictionary<string, long>.GetAlternateLookup<ReadOnlySpan<char>>().
 #if !NET9_0_OR_GREATER
 
 #if NET8_0_OR_GREATER

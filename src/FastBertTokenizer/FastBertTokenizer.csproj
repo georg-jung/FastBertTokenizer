@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">true</IsAotCompatible>
-    <!-- On .NET 9+ the span-based vocab lookup uses Dictionary.GetAlternateLookup instead of the unsafe char* StringSpanOrdinalKey trick. -->
+    <!-- On .NET 9+ the span-based vocab lookup uses FrozenDictionary.GetAlternateLookup instead of the unsafe char* StringSpanOrdinalKey trick. -->
     <AllowUnsafeBlocks Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">true</AllowUnsafeBlocks>
   </PropertyGroup>
 
