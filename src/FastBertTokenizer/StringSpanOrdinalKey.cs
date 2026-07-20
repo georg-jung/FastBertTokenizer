@@ -5,6 +5,9 @@
 mostly copied from https://github.com/dotnet/machinelearning/blob/72cfdf611a510ba0570170a708ddcc1a1928f329/src/Microsoft.ML.Tokenizers/Utils/StringSpanOrdinalKey.cs
 */
 
+// On .NET 9+ this whole construct is replaced by Dictionary<string, long>.GetAlternateLookup<ReadOnlySpan<char>>().
+#if !NET9_0_OR_GREATER
+
 #if NET8_0_OR_GREATER
 using System.Collections.Frozen;
 #endif
@@ -34,6 +37,8 @@ internal unsafe readonly struct StringSpanOrdinalKey : IEquatable<StringSpanOrdi
     private ReadOnlySpan<char> Span => Ptr is not null ?
         new ReadOnlySpan<char>(Ptr, Length) :
         Data.AsSpan();
+
+    public static implicit operator StringSpanOrdinalKey(string data) => new(data);
 
     public override string ToString() => Data ?? Span.ToString();
 
@@ -66,3 +71,4 @@ internal static class StringSpanOrdinalKeyDictExtensions
     }
 #endif
 }
+#endif

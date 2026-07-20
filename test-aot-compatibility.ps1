@@ -3,7 +3,7 @@
 param([string]$targetNetFramework)
 
 $rootDirectory = $PSScriptRoot
-$publishOutput = dotnet publish $rootDirectory/src/FastBertTokenizer.AotCompatibility.TestApp/FastBertTokenizer.AotCompatibility.TestApp.csproj -nodeReuse:false /p:UseSharedCompilation=false /p:ExposeExperimentalFeatures=true
+$publishOutput = dotnet publish $rootDirectory/src/FastBertTokenizer.AotCompatibility.TestApp/FastBertTokenizer.AotCompatibility.TestApp.csproj -f $targetNetFramework -nodeReuse:false /p:UseSharedCompilation=false /p:ExposeExperimentalFeatures=true
 
 $actualWarningCount = 0
 

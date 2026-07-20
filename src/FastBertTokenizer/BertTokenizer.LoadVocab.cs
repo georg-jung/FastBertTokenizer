@@ -68,8 +68,13 @@ public partial class BertTokenizer
             throw new InvalidOperationException("Vocabulary already loaded.");
         }
 
+#if NET9_0_OR_GREATER
+        var prefixes = new Dictionary<string, long>();
+        var suffixes = new Dictionary<string, long>();
+#else
         var prefixes = new Dictionary<StringSpanOrdinalKey, long>();
         var suffixes = new Dictionary<StringSpanOrdinalKey, long>();
+#endif
         (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
         var i = 0;
 
@@ -79,7 +84,7 @@ public partial class BertTokenizer
             {
                 if (line.StartsWith(VocabTxtDefaultContinuingSubwordPrefix, StringComparison.Ordinal))
                 {
-                    suffixes[new StringSpanOrdinalKey(line[2..])] = i;
+                    suffixes[line[2..]] = i;
                 }
                 else if (line.Equals(unknownToken, StringComparison.Ordinal))
                 {
@@ -99,7 +104,7 @@ public partial class BertTokenizer
                 }
                 else
                 {
-                    prefixes[new StringSpanOrdinalKey(line)] = i;
+                    prefixes[line] = i;
                 }
             }
 
@@ -149,6 +154,10 @@ public partial class BertTokenizer
 #else
             _prefixes = prefixes;
             _suffixes = suffixes;
+#endif
+#if NET9_0_OR_GREATER
+            _prefixLookup = _prefixes.GetAlternateLookup<ReadOnlySpan<char>>();
+            _suffixLookup = _suffixes.GetAlternateLookup<ReadOnlySpan<char>>();
 #endif
             _lowercaseInput = convertInputToLowercase;
             _decoderPrefix = VocabTxtDefaultContinuingSubwordPrefix;
