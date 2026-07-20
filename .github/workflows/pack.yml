@@ -101,7 +101,7 @@ jobs:
 
     steps:
       - name: Download docs artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: FastBertTokenizer-docs-${{ needs.build.outputs.doc_version }}
           path: docs
