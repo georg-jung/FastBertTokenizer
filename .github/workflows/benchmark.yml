@@ -42,7 +42,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-nuget-
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         global-json-file: global.json
         dotnet-version: 8.0.x # runtime for the net8.0 benchmark jobs
@@ -76,7 +76,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-nuget-
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         global-json-file: global.json
         dotnet-version: 8.0.x # runtime for the net8.0 benchmark jobs
