@@ -50,7 +50,7 @@ jobs:
     - run: dotnet run -c Release -f net10.0 -- --smoke --filter '*'
       working-directory: src/Benchmarks
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: benchmark-smoke-${{ github.run_number }}-${{ github.run_attempt }}
@@ -84,7 +84,7 @@ jobs:
     - run: dotnet run -c Release -f net10.0 -- --filter '*'
       working-directory: src/Benchmarks
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: benchmark-full-${{ github.run_number }}-${{ github.run_attempt }}
@@ -115,7 +115,7 @@ jobs:
     - run: python bench.py -o pyperf-results.json | tee bench-output.txt
       shell: bash # explicit shell: bash adds pipefail, so failures aren't masked by tee
       working-directory: src/HuggingfaceTokenizer/BenchPython
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: benchmark-python-${{ github.run_number }}-${{ github.run_attempt }}
