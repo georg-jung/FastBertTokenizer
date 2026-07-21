@@ -33,6 +33,8 @@ public partial class BertTokenizer
     private Dictionary<StringSpanOrdinalKey, long>? _prefixes;
     private Dictionary<StringSpanOrdinalKey, long>? _suffixes;
 #endif
+    private int _maxPrefixCharLen = int.MaxValue;
+    private int _maxSuffixCharLen = int.MaxValue;
     private (int Id, string Token) _unk = default!;
     private (int Id, string Token) _cls = default!;
     private (int Id, string Token) _sep = default!;
@@ -550,7 +552,10 @@ public partial class BertTokenizer
         }
 
         // No null checks for _prefixes and _suffixes because this is a private method.
-        var prefix = word;
+        // Prefixes/suffixes longer than the longest vocabulary entry can never match, so don't
+        // even try to look them up. For pathologically long words this avoids hashing the same
+        // long spans over and over again while shrinking the candidate prefix char by char.
+        var prefix = word.Length > _maxPrefixCharLen ? word.Slice(0, _maxPrefixCharLen) : word;
         var cnt = 0;
         long id = -1;
 
@@ -577,7 +582,7 @@ public partial class BertTokenizer
         offset += prefix.Length;
         while (remaining.Length > 0 && cnt < tokenIdSink.Length)
         {
-            var suffix = remaining;
+            var suffix = remaining.Length > _maxSuffixCharLen ? remaining.Slice(0, _maxSuffixCharLen) : remaining;
             id = -1;
 
             while (suffix.Length > 0)
@@ -603,6 +608,39 @@ public partial class BertTokenizer
         }
 
         return cnt;
+    }
+
+#if NET9_0_OR_GREATER
+    private void SetMaxTokenCharLens(Dictionary<string, long> prefixes, Dictionary<string, long> suffixes)
+    {
+        static int MaxKeyLen(Dictionary<string, long> dict)
+        {
+            var max = 0;
+            foreach (var key in dict.Keys)
+            {
+                max = Math.Max(max, key.Length);
+            }
+
+            return max;
+        }
+#else
+    private void SetMaxTokenCharLens(Dictionary<StringSpanOrdinalKey, long> prefixes, Dictionary<StringSpanOrdinalKey, long> suffixes)
+    {
+        static int MaxKeyLen(Dictionary<StringSpanOrdinalKey, long> dict)
+        {
+            var max = 0;
+            foreach (var key in dict.Keys)
+            {
+                // Keys stored in the dictionary are always string-backed.
+                max = Math.Max(max, key.Data!.Length);
+            }
+
+            return max;
+        }
+#endif
+
+        _maxPrefixCharLen = MaxKeyLen(prefixes);
+        _maxSuffixCharLen = MaxKeyLen(suffixes);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

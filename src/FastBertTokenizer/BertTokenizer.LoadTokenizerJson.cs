@@ -167,6 +167,7 @@ public partial class BertTokenizer
 
         _addedTokens = new(tok.AddedTokens.Select(x => (x.Content, x.Normalized)).OrderByDescending(x => x.Content.Length));
 
+        SetMaxTokenCharLens(prefixes, suffixes);
 #if NET8_0_OR_GREATER
         _prefixes = prefixes.ToFrozenDictionary();
         _suffixes = suffixes.ToFrozenDictionary();

@@ -148,6 +148,7 @@ public partial class BertTokenizer
             _sep = (sepId ?? throw new InvalidOperationException($"Vocabulary does not contain sep token {sepToken}."), sepToken);
             _pad = (padId ?? throw new InvalidOperationException($"Vocabulary does not contain pad token {padToken}."), padToken);
 
+            SetMaxTokenCharLens(prefixes, suffixes);
 #if NET8_0_OR_GREATER
             _prefixes = prefixes.ToFrozenDictionary();
             _suffixes = suffixes.ToFrozenDictionary();
