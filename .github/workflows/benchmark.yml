@@ -31,18 +31,18 @@ jobs:
     permissions:
       contents: read
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
         lfs: true
-    - uses: actions/cache@v4
+    - uses: actions/cache@v6
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         global-json-file: global.json
         dotnet-version: 8.0.x # runtime for the net8.0 benchmark jobs
@@ -50,7 +50,7 @@ jobs:
     - run: dotnet run -c Release -f net10.0 -- --smoke --filter '*'
       working-directory: src/Benchmarks
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: benchmark-smoke-${{ github.run_number }}-${{ github.run_attempt }}
@@ -65,18 +65,18 @@ jobs:
     permissions:
       contents: read
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
         lfs: true
-    - uses: actions/cache@v4
+    - uses: actions/cache@v6
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         global-json-file: global.json
         dotnet-version: 8.0.x # runtime for the net8.0 benchmark jobs
@@ -84,7 +84,7 @@ jobs:
     - run: dotnet run -c Release -f net10.0 -- --filter '*'
       working-directory: src/Benchmarks
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: benchmark-full-${{ github.run_number }}-${{ github.run_attempt }}
@@ -99,10 +99,10 @@ jobs:
     permissions:
       contents: read
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         lfs: true
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v7
       with:
         python-version: '3.12'
         cache: pip
@@ -115,7 +115,7 @@ jobs:
     - run: python bench.py -o pyperf-results.json | tee bench-output.txt
       shell: bash # explicit shell: bash adds pipefail, so failures aren't masked by tee
       working-directory: src/HuggingfaceTokenizer/BenchPython
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: benchmark-python-${{ github.run_number }}-${{ github.run_attempt }}
