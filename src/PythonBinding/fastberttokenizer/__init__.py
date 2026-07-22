@@ -35,6 +35,13 @@ class NativeError(RuntimeError):
     """An error reported by the FastBertTokenizer native library."""
 
 
+def _validate_max_tokens(max_tokens: int) -> None:
+    if max_tokens <= 0:
+        raise ValueError("max_tokens must be > 0.")
+    if max_tokens > 2**31 - 1:
+        raise ValueError(f"max_tokens must be <= {2**31 - 1}.")
+
+
 def _default_lib_names() -> list[str]:
     system = platform.system()
     if system == "Windows":
@@ -171,8 +178,7 @@ class BertTokenizer:
         padded per row. The arrays can be fed directly to e.g. onnxruntime or torch.
         """
         count = len(texts)
-        if max_tokens <= 0:
-            raise ValueError("max_tokens must be > 0.")
+        _validate_max_tokens(max_tokens)
         # The native side rejects batches larger than this anyway; failing here avoids
         # allocating the (potentially huge) output arrays first.
         if count * max_tokens > 2**31 - 1:
@@ -210,9 +216,12 @@ class BertTokenizer:
 
     def encode(self, text: str, max_tokens: int = 512):
         """Encode a single text. Returns (input_ids, attention_mask) as 1-D numpy int64 arrays."""
+        _validate_max_tokens(max_tokens)
+        data = text.encode("utf-8")
+        if len(data) > 2**31 - 1:
+            raise ValueError("a single text must not exceed 2 GiB of UTF-8 bytes.")
         input_ids = np.empty(max_tokens, dtype=np.int64)
         attention_mask = np.empty(max_tokens, dtype=np.int64)
-        data = text.encode("utf-8")
         int64_ptr = ctypes.POINTER(ctypes.c_int64)
         rc = self._lib.fbt_encode(
             self._handle,
