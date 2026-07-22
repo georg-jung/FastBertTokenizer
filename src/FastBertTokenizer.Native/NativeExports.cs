@@ -33,6 +33,9 @@ internal static unsafe class NativeExports
     private static string? _lastError;
 
     [ThreadStatic]
+    private static string? _lastErrorMaterialized;
+
+    [ThreadStatic]
     private static nint _lastErrorUtf8;
 
     /// <summary>Create a new tokenizer instance. Returns an opaque handle, or 0 on failure.</summary>
@@ -286,6 +289,14 @@ internal static unsafe class NativeExports
             return 0;
         }
 
+        // Repeated queries must return the same buffer while no new failure occurred - the
+        // documented lifetime is "valid until the next failing call on this thread". Only
+        // re-encode (and free the previous buffer) once the message actually changed.
+        if (_lastErrorUtf8 != 0 && ReferenceEquals(_lastErrorMaterialized, msg))
+        {
+            return _lastErrorUtf8;
+        }
+
         if (_lastErrorUtf8 != 0)
         {
             NativeMemory.Free((void*)_lastErrorUtf8);
@@ -297,6 +308,7 @@ internal static unsafe class NativeExports
         bytes.CopyTo(new Span<byte>(buf, bytes.Length));
         buf[bytes.Length] = 0;
         _lastErrorUtf8 = (nint)buf;
+        _lastErrorMaterialized = msg;
         return _lastErrorUtf8;
     }
 
