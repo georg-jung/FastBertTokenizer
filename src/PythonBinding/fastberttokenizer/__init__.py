@@ -220,13 +220,15 @@ class BertTokenizer:
         ids = np.ascontiguousarray(token_ids, dtype=np.int64)
         int64_ptr = ctypes.POINTER(ctypes.c_int64)
         required = ctypes.c_int64()
+        # Size query: the native side always answers -4 ("buffer too small") for a null
+        # output buffer and reports the required byte count via `required`.
         rc = self._lib.fbt_decode(
             self._handle, ids.ctypes.data_as(int64_ptr), ids.size, None, 0, ctypes.byref(required)
         )
-        if rc == 0:
-            return ""
-        if rc != -4:  # anything but "buffer too small" is a real error
+        if rc != -4:
             self._raise("fbt_decode", rc)
+        if required.value == 0:
+            return ""
         buf = ctypes.create_string_buffer(required.value)
         rc = self._lib.fbt_decode(
             self._handle, ids.ctypes.data_as(int64_ptr), ids.size, buf, required.value, ctypes.byref(required)
