@@ -246,11 +246,13 @@ internal static unsafe class NativeExports
             }
 
             var input = Encoding.UTF8.GetString(text, textByteLen);
-            return tok.Encode(
-                input,
-                new Span<long>(inputIds, maxTokens),
-                new Span<long>(attentionMask, maxTokens),
-                padTo: maxTokens);
+            var maskSpan = new Span<long>(attentionMask, maxTokens);
+            tok.Encode(input, new Span<long>(inputIds, maxTokens), maskSpan, padTo: maxTokens);
+
+            // With padTo set, Encode returns the padded length; the documented return value is
+            // the non-padding count, which the attention mask (1s followed by 0s) tells us.
+            var nonPadded = maskSpan.IndexOf(0L);
+            return nonPadded < 0 ? maxTokens : nonPadded;
         }
         catch (Exception ex)
         {
