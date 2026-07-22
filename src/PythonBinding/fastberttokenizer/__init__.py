@@ -171,11 +171,22 @@ class BertTokenizer:
         padded per row. The arrays can be fed directly to e.g. onnxruntime or torch.
         """
         count = len(texts)
+        if max_tokens <= 0:
+            raise ValueError("max_tokens must be > 0.")
+        # The native side rejects batches larger than this anyway; failing here avoids
+        # allocating the (potentially huge) output arrays first.
+        if count * max_tokens > 2**31 - 1:
+            raise ValueError(
+                f"count * max_tokens must be <= {2**31 - 1} per call; split the batch."
+            )
+
+        encoded = [t.encode("utf-8") for t in texts]
+        if encoded and max(map(len, encoded)) > 2**31 - 1:
+            raise ValueError("a single text must not exceed 2 GiB of UTF-8 bytes.")
+
         input_ids = np.empty((count, max_tokens), dtype=np.int64)
         attention_mask = np.empty((count, max_tokens), dtype=np.int64)
         token_type_ids = np.empty((count, max_tokens), dtype=np.int64) if return_token_type_ids else None
-
-        encoded = [t.encode("utf-8") for t in texts]
         text_array = (ctypes.c_char_p * count)(*encoded)
         len_array = (ctypes.c_int32 * count)(*(len(b) for b in encoded))
 

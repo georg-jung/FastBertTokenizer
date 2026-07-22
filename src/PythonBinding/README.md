@@ -28,6 +28,10 @@ tokenization uses all cores via the .NET thread pool.
 
 ## Correctness
 
+[`smoke.py`](smoke.py) exercises the C ABI contract itself: handle lifecycle (including
+stale/garbage/double-destroyed handles), error codes and last-error semantics, encode
+return values, per-item argument validation and the decode size-query protocol.
+
 [`verify.py`](verify.py) checks id-level parity against Hugging Face `tokenizers` on the
 benchmark corpus (15,000 simple english wikipedia articles), analogous to
 [`../HuggingfaceTokenizer/BenchPython/verify.py`](../HuggingfaceTokenizer/BenchPython/verify.py).

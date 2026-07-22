@@ -278,9 +278,9 @@ internal static unsafe class NativeExports
                 return ErrInvalidHandle;
             }
 
-            if (tokenIds is null || count < 0 || outRequiredByteLen is null)
+            if (tokenIds is null || count < 0 || outRequiredByteLen is null || outByteLen < 0)
             {
-                _lastError = "tokenIds and outRequiredByteLen must not be null and count must be >= 0.";
+                _lastError = "tokenIds and outRequiredByteLen must not be null; count and outByteLen must be >= 0.";
                 return ErrInvalidArgument;
             }
 
