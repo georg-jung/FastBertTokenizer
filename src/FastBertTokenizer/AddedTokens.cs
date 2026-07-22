@@ -17,7 +17,7 @@ internal class AddedTokens
 
         // This logic might not be perfect. Are there chars that are equal to others in an invariant case insesitive comparison
         // but are neither the upper nor the lower variant of the original?
-        var firstLettersToSearch = addedTokens
+        var firstLettersToSearch = Tokens
             .SelectMany(x => x.Normalize
                 ? (IEnumerable<char>)[x.Content[0], char.ToLowerInvariant(x.Content[0]), char.ToUpperInvariant(x.Content[0])]
                 : [x.Content[0]])
