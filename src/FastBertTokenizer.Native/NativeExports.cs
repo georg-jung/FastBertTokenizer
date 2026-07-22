@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -29,6 +30,13 @@ internal static unsafe class NativeExports
     private const int ErrInvalidArgument = -3;
     private const int ErrBufferTooSmall = -4;
 
+    // Handles are opaque ids into this table rather than raw GCHandles: resolving an arbitrary
+    // caller-supplied value through GCHandle.FromIntPtr is undefined behavior (a garbage value
+    // can hard-abort the process with an access violation), while a dictionary lookup makes
+    // invalid, stale and double-destroyed handles reliably fail with ErrInvalidHandle.
+    private static readonly ConcurrentDictionary<nint, BertTokenizer> Instances = new();
+    private static long _nextHandle;
+
     [ThreadStatic]
     private static string? _lastError;
 
@@ -44,7 +52,9 @@ internal static unsafe class NativeExports
     {
         try
         {
-            return GCHandle.ToIntPtr(GCHandle.Alloc(new BertTokenizer()));
+            var handle = (nint)Interlocked.Increment(ref _nextHandle);
+            Instances[handle] = new BertTokenizer();
+            return handle;
         }
         catch (Exception ex)
         {
@@ -53,13 +63,17 @@ internal static unsafe class NativeExports
         }
     }
 
-    /// <summary>Destroy a tokenizer instance created by <c>fbt_create</c>. Passing 0 is a no-op.</summary>
+    /// <summary>
+    /// Destroy a tokenizer instance created by <c>fbt_create</c>. Passing 0 is a no-op.
+    /// Best-effort: an invalid or already-destroyed handle is reported via <c>fbt_last_error</c>
+    /// instead of failing.
+    /// </summary>
     [UnmanagedCallersOnly(EntryPoint = "fbt_destroy")]
     public static void Destroy(nint handle)
     {
-        if (handle != 0)
+        if (handle != 0 && !Instances.TryRemove(handle, out _))
         {
-            GCHandle.FromIntPtr(handle).Free();
+            _lastError = "handle does not refer to a live tokenizer instance.";
         }
     }
 
@@ -316,18 +330,14 @@ internal static unsafe class NativeExports
 
     private static BertTokenizer? Resolve(nint handle)
     {
-        if (handle == 0)
-        {
-            _lastError = "handle must not be 0.";
-            return null;
-        }
-
-        if (GCHandle.FromIntPtr(handle).Target is BertTokenizer tok)
+        if (Instances.TryGetValue(handle, out var tok))
         {
             return tok;
         }
 
-        _lastError = "handle does not refer to a tokenizer instance.";
+        _lastError = handle == 0
+            ? "handle must not be 0."
+            : "handle does not refer to a live tokenizer instance.";
         return null;
     }
 
