@@ -3,6 +3,7 @@
 
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -47,7 +48,7 @@ internal static unsafe class NativeExports
     private static nint _lastErrorUtf8;
 
     /// <summary>Create a new tokenizer instance. Returns an opaque handle, or 0 on failure.</summary>
-    [UnmanagedCallersOnly(EntryPoint = "fbt_create")]
+    [UnmanagedCallersOnly(EntryPoint = "fbt_create", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static nint Create()
     {
         try
@@ -68,7 +69,7 @@ internal static unsafe class NativeExports
     /// Best-effort: an invalid or already-destroyed handle is reported via <c>fbt_last_error</c>
     /// instead of failing.
     /// </summary>
-    [UnmanagedCallersOnly(EntryPoint = "fbt_destroy")]
+    [UnmanagedCallersOnly(EntryPoint = "fbt_destroy", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static void Destroy(nint handle)
     {
         if (handle != 0 && !Instances.TryRemove(handle, out _))
@@ -81,7 +82,7 @@ internal static unsafe class NativeExports
     /// Load a Hugging Face tokenizer.json (UTF-8 bytes). The caller keeps ownership of the buffer;
     /// it is not referenced after this call returns.
     /// </summary>
-    [UnmanagedCallersOnly(EntryPoint = "fbt_load_tokenizer_json")]
+    [UnmanagedCallersOnly(EntryPoint = "fbt_load_tokenizer_json", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int LoadTokenizerJson(nint handle, byte* json, nint jsonByteLen)
     {
         try
@@ -112,7 +113,7 @@ internal static unsafe class NativeExports
     /// Load a vocab.txt (UTF-8 bytes). <paramref name="convertInputToLowercase"/> != 0 enables lowercasing,
     /// as for uncased models. The caller keeps ownership of the buffer.
     /// </summary>
-    [UnmanagedCallersOnly(EntryPoint = "fbt_load_vocab_txt")]
+    [UnmanagedCallersOnly(EntryPoint = "fbt_load_vocab_txt", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int LoadVocabTxt(nint handle, byte* vocab, nint vocabByteLen, int convertInputToLowercase)
     {
         try
@@ -146,7 +147,7 @@ internal static unsafe class NativeExports
     /// per input). <paramref name="tokenTypeIds"/> may be null; if given it is zero-filled.
     /// <paramref name="parallel"/> != 0 tokenizes on the .NET thread pool (recommended for large batches).
     /// </summary>
-    [UnmanagedCallersOnly(EntryPoint = "fbt_encode_batch")]
+    [UnmanagedCallersOnly(EntryPoint = "fbt_encode_batch", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int EncodeBatch(
         nint handle,
         byte** texts,
@@ -177,6 +178,15 @@ internal static unsafe class NativeExports
             {
                 _lastError = $"count * maxTokens must be <= {int.MaxValue} per call; split the batch.";
                 return ErrInvalidArgument;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                if (textByteLens[i] < 0 || (texts[i] is null && textByteLens[i] > 0))
+                {
+                    _lastError = $"texts[{i}] is null with a positive length or textByteLens[{i}] is negative.";
+                    return ErrInvalidArgument;
+                }
             }
 
             var inputs = MaterializeStrings(texts, textByteLens, count, parallel != 0);
@@ -219,7 +229,7 @@ internal static unsafe class NativeExports
     /// <paramref name="inputIds"/> and <paramref name="attentionMask"/> (padded to <paramref name="maxTokens"/>).
     /// Returns the number of non-padding tokens produced, or a negative error code.
     /// </summary>
-    [UnmanagedCallersOnly(EntryPoint = "fbt_encode")]
+    [UnmanagedCallersOnly(EntryPoint = "fbt_encode", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int EncodeSingle(nint handle, byte* text, int textByteLen, int maxTokens, long* inputIds, long* attentionMask)
     {
         try
@@ -256,7 +266,7 @@ internal static unsafe class NativeExports
     /// and returns 0; otherwise returns <c>ErrBufferTooSmall</c> (-4) without writing text.
     /// Call with <paramref name="outUtf8"/> = null to query the required size.
     /// </summary>
-    [UnmanagedCallersOnly(EntryPoint = "fbt_decode")]
+    [UnmanagedCallersOnly(EntryPoint = "fbt_decode", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int Decode(nint handle, long* tokenIds, int count, byte* outUtf8, long outByteLen, long* outRequiredByteLen)
     {
         try
@@ -294,36 +304,45 @@ internal static unsafe class NativeExports
     /// Returns a NUL-terminated UTF-8 message describing the last error on the calling thread,
     /// or 0 if none occurred. The pointer stays valid until the next failing call on the same thread.
     /// </summary>
-    [UnmanagedCallersOnly(EntryPoint = "fbt_last_error")]
+    [UnmanagedCallersOnly(EntryPoint = "fbt_last_error", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static nint LastError()
     {
-        var msg = _lastError;
-        if (msg is null)
+        try
         {
-            return 0;
-        }
+            var msg = _lastError;
+            if (msg is null)
+            {
+                return 0;
+            }
 
-        // Repeated queries must return the same buffer while no new failure occurred - the
-        // documented lifetime is "valid until the next failing call on this thread". Only
-        // re-encode (and free the previous buffer) once the message actually changed.
-        if (_lastErrorUtf8 != 0 && ReferenceEquals(_lastErrorMaterialized, msg))
-        {
+            // Repeated queries must return the same buffer while no new failure occurred - the
+            // documented lifetime is "valid until the next failing call on this thread". Only
+            // re-encode (and free the previous buffer) once the message actually changed.
+            if (_lastErrorUtf8 != 0 && ReferenceEquals(_lastErrorMaterialized, msg))
+            {
+                return _lastErrorUtf8;
+            }
+
+            if (_lastErrorUtf8 != 0)
+            {
+                NativeMemory.Free((void*)_lastErrorUtf8);
+                _lastErrorUtf8 = 0;
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(msg);
+            var buf = (byte*)NativeMemory.Alloc((nuint)bytes.Length + 1);
+            bytes.CopyTo(new Span<byte>(buf, bytes.Length));
+            buf[bytes.Length] = 0;
+            _lastErrorUtf8 = (nint)buf;
+            _lastErrorMaterialized = msg;
             return _lastErrorUtf8;
         }
-
-        if (_lastErrorUtf8 != 0)
+        catch (Exception)
         {
-            NativeMemory.Free((void*)_lastErrorUtf8);
-            _lastErrorUtf8 = 0;
+            // Even allocation failure must not escape an [UnmanagedCallersOnly] export;
+            // "no message available" is the only safe answer here.
+            return 0;
         }
-
-        var bytes = Encoding.UTF8.GetBytes(msg);
-        var buf = (byte*)NativeMemory.Alloc((nuint)bytes.Length + 1);
-        bytes.CopyTo(new Span<byte>(buf, bytes.Length));
-        buf[bytes.Length] = 0;
-        _lastErrorUtf8 = (nint)buf;
-        _lastErrorMaterialized = msg;
-        return _lastErrorUtf8;
     }
 
     private static void SetLastError(Exception ex) => _lastError = ex.ToString();
