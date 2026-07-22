@@ -38,8 +38,19 @@ Result: 3 of 15,000 documents (0.02 %) differ — the same known corpus-level di
 
 [`bench.py`](bench.py) mirrors the methodology of
 [`../HuggingfaceTokenizer/BenchPython/bench.py`](../HuggingfaceTokenizer/BenchPython/bench.py)
-(same corpus, same vocabulary, truncation at 512 tokens, pyperf). Numbers depend on the
-machine; see the PR / CI logs for measured results.
+(same corpus, same vocabulary, truncation at 512 tokens, pyperf). Measured in a 4-vCPU
+Linux x64 container (`pyperf --fast`, so treat as indicative rather than rigorous):
+
+| Called from Python                  | Single-text loop | Batch (parallel) |
+|-------------------------------------|-----------------:|-----------------:|
+| **FastBertTokenizer (this binding)**|       **542 ms** |       **211 ms** |
+| tokie (Rust)                        |          1.11 s  |           830 ms |
+| Hugging Face tokenizers (Rust)      |          11.0 s  |           3.01 s |
+
+FastBertTokenizer's batch call additionally ran at 531 ms with `parallel=False`. At ~3.66 M
+tokens for the corpus, 211 ms is ≈17 M tokens/s from Python — including the Python → native
+UTF-8 marshalling and numpy allocation, i.e. the interop cost does not eat the library's
+advantage.
 
 ## What a real release would still need
 
