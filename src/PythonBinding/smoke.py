@@ -40,6 +40,13 @@ def int64_ptr(arr):
     return arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int64))
 
 
+def encode1(handle, text, max_tokens, ids, mask):
+    """Encode a single text through the batch entry point (count = 1, sequential)."""
+    texts = (ctypes.c_char_p * 1)(text)
+    lens = (ctypes.c_int32 * 1)(len(text))
+    return lib.fbt_encode_batch(handle, texts, lens, 1, max_tokens, int64_ptr(ids), int64_ptr(mask), 0)
+
+
 tok = BertTokenizer.from_tokenizer_json(TOKENIZER_JSON)
 lib = tok._lib
 ids = np.empty(8, dtype=np.int64)
@@ -47,12 +54,12 @@ mask = np.empty(8, dtype=np.int64)
 
 print("handle lifecycle:")
 check("create returns non-zero handle", tok._handle != 0)
-check("zero handle -> invalid handle", lib.fbt_encode(0, b"x", 1, 8, int64_ptr(ids), int64_ptr(mask)) == ERR_INVALID_HANDLE)
-check("garbage handle -> invalid handle", lib.fbt_encode(987654321, b"x", 1, 8, int64_ptr(ids), int64_ptr(mask)) == ERR_INVALID_HANDLE)
+check("zero handle -> invalid handle", encode1(0, b"x", 8, ids, mask) == ERR_INVALID_HANDLE)
+check("garbage handle -> invalid handle", encode1(987654321, b"x", 8, ids, mask) == ERR_INVALID_HANDLE)
 stale = lib.fbt_create()
 lib.fbt_destroy(stale)
 lib.fbt_destroy(stale)  # double destroy must be survivable
-check("stale handle after destroy -> invalid handle", lib.fbt_encode(stale, b"x", 1, 8, int64_ptr(ids), int64_ptr(mask)) == ERR_INVALID_HANDLE)
+check("stale handle after destroy -> invalid handle", encode1(stale, b"x", 8, ids, mask) == ERR_INVALID_HANDLE)
 
 print("loading:")
 unloaded = lib.fbt_create()
@@ -63,31 +70,30 @@ big_ids = np.empty((4, 128), dtype=np.int64)
 big_mask = np.empty((4, 128), dtype=np.int64)
 texts = (ctypes.c_char_p * 4)(b"a", b"b", b"c", b"d")
 lens = (ctypes.c_int32 * 4)(1, 1, 1, 1)
-rc = lib.fbt_encode_batch(unloaded, texts, lens, 4, 128, int64_ptr(big_ids), int64_ptr(big_mask), None, 1)
+rc = lib.fbt_encode_batch(unloaded, texts, lens, 4, 128, int64_ptr(big_ids), int64_ptr(big_mask), 1)
 check("parallel encode without vocabulary -> error, process survives", rc == ERR_EXCEPTION)
 lib.fbt_destroy(unloaded)
 
 print("encode:")
-rc = lib.fbt_encode(tok._handle, b"hi", 2, 8, int64_ptr(ids), int64_ptr(mask))
-check("returns non-padding count", rc == 3, f"got {rc}")
+encode1(tok._handle, b"hi", 8, ids, mask)
 check("attention mask matches count", int(mask.sum()) == 3)
-long_text = ("lorem ipsum dolor " * 20).encode()
-rc = lib.fbt_encode(tok._handle, long_text, len(long_text), 8, int64_ptr(ids), int64_ptr(mask))
-check("truncated input returns max_tokens", rc == 8, f"got {rc}")
+check("wrapper mask sum", int(tok.encode("hi", max_tokens=8)[1].sum()) == 3)
+check("wrapper truncates to max_tokens", int(tok.encode("lorem ipsum dolor " * 20, max_tokens=8)[1].sum()) == 8)
+check("empty batch (parallel) -> empty arrays", tok.encode_batch([], max_tokens=8)[0].shape == (0, 8))
 
 print("encode_batch argument validation:")
 bad_lens = (ctypes.c_int32 * 4)(1, -1, 1, 1)
-rc = lib.fbt_encode_batch(tok._handle, texts, bad_lens, 4, 128, int64_ptr(big_ids), int64_ptr(big_mask), None, 0)
+rc = lib.fbt_encode_batch(tok._handle, texts, bad_lens, 4, 128, int64_ptr(big_ids), int64_ptr(big_mask), 0)
 check("negative per-item length -> invalid argument", rc == ERR_INVALID_ARGUMENT)
 null_texts = (ctypes.c_char_p * 1)(None)
 one_len = (ctypes.c_int32 * 1)(3)
-rc = lib.fbt_encode_batch(tok._handle, null_texts, one_len, 1, 128, int64_ptr(big_ids), int64_ptr(big_mask), None, 0)
+rc = lib.fbt_encode_batch(tok._handle, null_texts, one_len, 1, 128, int64_ptr(big_ids), int64_ptr(big_mask), 0)
 check("null text with positive length -> invalid argument", rc == ERR_INVALID_ARGUMENT)
-rc = lib.fbt_encode_batch(tok._handle, None, lens, 4, 128, int64_ptr(big_ids), int64_ptr(big_mask), None, 0)
+rc = lib.fbt_encode_batch(tok._handle, None, lens, 4, 128, int64_ptr(big_ids), int64_ptr(big_mask), 0)
 check("null texts array -> invalid argument", rc == ERR_INVALID_ARGUMENT)
 
 print("decode:")
-lib.fbt_encode(tok._handle, b"hi", 2, 8, int64_ptr(ids), int64_ptr(mask))
+encode1(tok._handle, b"hi", 8, ids, mask)
 required = ctypes.c_int64()
 rc = lib.fbt_decode(tok._handle, int64_ptr(ids), 3, None, 0, ctypes.byref(required))
 check("size query -> buffer too small + required size", rc == ERR_BUFFER_TOO_SMALL and required.value > 0)
@@ -99,7 +105,7 @@ check("negative outByteLen -> invalid argument", rc == ERR_INVALID_ARGUMENT)
 check("wrapper empty decode", tok.decode([]) == "")
 
 print("last_error semantics:")
-lib.fbt_encode(0, b"x", 1, 8, int64_ptr(ids), int64_ptr(mask))  # provoke a failure
+encode1(0, b"x", 8, ids, mask)  # provoke a failure
 lib.fbt_last_error.restype = ctypes.c_void_p  # compare pointers, not bytes
 p1, p2 = lib.fbt_last_error(), lib.fbt_last_error()
 lib.fbt_last_error.restype = ctypes.c_char_p
