@@ -39,13 +39,7 @@ internal static unsafe class NativeExports
     private static long _nextHandle;
 
     [ThreadStatic]
-    private static string? _lastError;
-
-    [ThreadStatic]
-    private static string? _lastErrorMaterialized;
-
-    [ThreadStatic]
-    private static nint _lastErrorUtf8;
+    private static byte[]? _lastError;
 
     /// <summary>Create a new tokenizer instance. Returns an opaque handle, or 0 on failure.</summary>
     [UnmanagedCallersOnly(EntryPoint = "fbt_create", CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -74,7 +68,7 @@ internal static unsafe class NativeExports
     {
         if (handle != 0 && !Instances.TryRemove(handle, out _))
         {
-            _lastError = "handle does not refer to a live tokenizer instance.";
+            SetLastError("handle does not refer to a live tokenizer instance.");
         }
     }
 
@@ -94,7 +88,7 @@ internal static unsafe class NativeExports
 
             if (json is null || jsonByteLen < 0)
             {
-                _lastError = "json must not be null and jsonByteLen must be >= 0.";
+                SetLastError("json must not be null and jsonByteLen must be >= 0.");
                 return ErrInvalidArgument;
             }
 
@@ -125,7 +119,7 @@ internal static unsafe class NativeExports
 
             if (vocab is null || vocabByteLen < 0)
             {
-                _lastError = "vocab must not be null and vocabByteLen must be >= 0.";
+                SetLastError("vocab must not be null and vocabByteLen must be >= 0.");
                 return ErrInvalidArgument;
             }
 
@@ -144,8 +138,8 @@ internal static unsafe class NativeExports
     /// <summary>
     /// Encode a batch of UTF-8 texts. Writes <c>count * max_tokens</c> int64 values to
     /// <paramref name="inputIds"/> and <paramref name="attentionMask"/> (row-major, one padded row
-    /// per input). <paramref name="tokenTypeIds"/> may be null; if given it is zero-filled.
-    /// <paramref name="parallel"/> != 0 tokenizes on the .NET thread pool (recommended for large batches).
+    /// per input). <paramref name="parallel"/> != 0 tokenizes on the .NET thread pool
+    /// (recommended for large batches).
     /// </summary>
     [UnmanagedCallersOnly(EntryPoint = "fbt_encode_batch", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int EncodeBatch(
@@ -156,7 +150,6 @@ internal static unsafe class NativeExports
         int maxTokens,
         long* inputIds,
         long* attentionMask,
-        long* tokenTypeIds,
         int parallel)
     {
         try
@@ -169,14 +162,14 @@ internal static unsafe class NativeExports
             if (texts is null || textByteLens is null || inputIds is null || attentionMask is null
                 || count < 0 || maxTokens <= 0)
             {
-                _lastError = "texts, textByteLens, inputIds and attentionMask must not be null; count must be >= 0 and maxTokens > 0.";
+                SetLastError("texts, textByteLens, inputIds and attentionMask must not be null; count must be >= 0 and maxTokens > 0.");
                 return ErrInvalidArgument;
             }
 
             long totalLen = (long)count * maxTokens;
             if (totalLen > int.MaxValue)
             {
-                _lastError = $"count * maxTokens must be <= {int.MaxValue} per call; split the batch.";
+                SetLastError($"count * maxTokens must be <= {int.MaxValue} per call; split the batch.");
                 return ErrInvalidArgument;
             }
 
@@ -184,12 +177,17 @@ internal static unsafe class NativeExports
             {
                 if (textByteLens[i] < 0 || (texts[i] is null && textByteLens[i] > 0))
                 {
-                    _lastError = $"texts[{i}] is null with a positive length or textByteLens[{i}] is negative.";
+                    SetLastError($"texts[{i}] is null with a positive length or textByteLens[{i}] is negative.");
                     return ErrInvalidArgument;
                 }
             }
 
-            var inputs = MaterializeStrings(texts, textByteLens, count, parallel != 0);
+            var inputs = new string[count];
+            for (var i = 0; i < count; i++)
+            {
+                // A null pointer with length 0 is a valid empty input, but GetString(null, 0) throws.
+                inputs[i] = textByteLens[i] == 0 ? string.Empty : Encoding.UTF8.GetString(texts[i], textByteLens[i]);
+            }
 
             if (parallel != 0)
             {
@@ -210,49 +208,7 @@ internal static unsafe class NativeExports
                 }
             }
 
-            if (tokenTypeIds is not null)
-            {
-                new Span<long>(tokenTypeIds, (int)totalLen).Clear();
-            }
-
             return Ok;
-        }
-        catch (Exception ex)
-        {
-            SetLastError(ex);
-            return ErrException;
-        }
-    }
-
-    /// <summary>
-    /// Encode a single UTF-8 text. Writes up to <paramref name="maxTokens"/> int64 values to
-    /// <paramref name="inputIds"/> and <paramref name="attentionMask"/> (padded to <paramref name="maxTokens"/>).
-    /// Returns the number of non-padding tokens produced, or a negative error code.
-    /// </summary>
-    [UnmanagedCallersOnly(EntryPoint = "fbt_encode", CallConvs = new[] { typeof(CallConvCdecl) })]
-    public static int EncodeSingle(nint handle, byte* text, int textByteLen, int maxTokens, long* inputIds, long* attentionMask)
-    {
-        try
-        {
-            if (Resolve(handle) is not { } tok)
-            {
-                return ErrInvalidHandle;
-            }
-
-            if (text is null || inputIds is null || attentionMask is null || textByteLen < 0 || maxTokens <= 0)
-            {
-                _lastError = "text, inputIds and attentionMask must not be null; textByteLen must be >= 0 and maxTokens > 0.";
-                return ErrInvalidArgument;
-            }
-
-            var input = Encoding.UTF8.GetString(text, textByteLen);
-            var maskSpan = new Span<long>(attentionMask, maxTokens);
-            tok.Encode(input, new Span<long>(inputIds, maxTokens), maskSpan, padTo: maxTokens);
-
-            // With padTo set, Encode returns the padded length; the documented return value is
-            // the non-padding count, which the attention mask (1s followed by 0s) tells us.
-            var nonPadded = maskSpan.IndexOf(0L);
-            return nonPadded < 0 ? maxTokens : nonPadded;
         }
         catch (Exception ex)
         {
@@ -280,7 +236,7 @@ internal static unsafe class NativeExports
 
             if (tokenIds is null || count < 0 || outRequiredByteLen is null || outByteLen < 0)
             {
-                _lastError = "tokenIds and outRequiredByteLen must not be null; count and outByteLen must be >= 0.";
+                SetLastError("tokenIds and outRequiredByteLen must not be null; count and outByteLen must be >= 0.");
                 return ErrInvalidArgument;
             }
 
@@ -307,47 +263,18 @@ internal static unsafe class NativeExports
     /// or 0 if none occurred. The pointer stays valid until the next failing call on the same thread.
     /// </summary>
     [UnmanagedCallersOnly(EntryPoint = "fbt_last_error", CallConvs = new[] { typeof(CallConvCdecl) })]
-    public static nint LastError()
+    public static nint LastError() => _lastError is { } e ? Marshal.UnsafeAddrOfPinnedArrayElement(e, 0) : 0;
+
+    private static void SetLastError(Exception ex) => SetLastError(ex.ToString());
+
+    private static void SetLastError(string message)
     {
-        try
-        {
-            var msg = _lastError;
-            if (msg is null)
-            {
-                return 0;
-            }
-
-            // Repeated queries must return the same buffer while no new failure occurred - the
-            // documented lifetime is "valid until the next failing call on this thread". Only
-            // re-encode (and free the previous buffer) once the message actually changed.
-            if (_lastErrorUtf8 != 0 && ReferenceEquals(_lastErrorMaterialized, msg))
-            {
-                return _lastErrorUtf8;
-            }
-
-            if (_lastErrorUtf8 != 0)
-            {
-                NativeMemory.Free((void*)_lastErrorUtf8);
-                _lastErrorUtf8 = 0;
-            }
-
-            var bytes = Encoding.UTF8.GetBytes(msg);
-            var buf = (byte*)NativeMemory.Alloc((nuint)bytes.Length + 1);
-            bytes.CopyTo(new Span<byte>(buf, bytes.Length));
-            buf[bytes.Length] = 0;
-            _lastErrorUtf8 = (nint)buf;
-            _lastErrorMaterialized = msg;
-            return _lastErrorUtf8;
-        }
-        catch (Exception)
-        {
-            // Even allocation failure must not escape an [UnmanagedCallersOnly] export;
-            // "no message available" is the only safe answer here.
-            return 0;
-        }
+        // The buffer lives on the pinned object heap, so the returned pointer stays valid for as
+        // long as the thread-static references it - i.e. exactly the documented lifetime.
+        var buf = GC.AllocateUninitializedArray<byte>(Encoding.UTF8.GetByteCount(message) + 1, pinned: true);
+        buf[Encoding.UTF8.GetBytes(message, buf)] = 0;
+        _lastError = buf;
     }
-
-    private static void SetLastError(Exception ex) => _lastError = ex.ToString();
 
     private static BertTokenizer? Resolve(nint handle)
     {
@@ -356,41 +283,10 @@ internal static unsafe class NativeExports
             return tok;
         }
 
-        _lastError = handle == 0
+        SetLastError(handle == 0
             ? "handle must not be 0."
-            : "handle does not refer to a live tokenizer instance.";
+            : "handle does not refer to a live tokenizer instance.");
         return null;
-    }
-
-    private static string[] MaterializeStrings(byte** texts, int* textByteLens, int count, bool parallel)
-    {
-        var result = new string[count];
-
-        // Converting UTF-8 to .NET strings is a real share of small-batch runtime, so parallelize
-        // it alongside parallel tokenization. Pointers can't be captured by lambdas; smuggle them
-        // through nints.
-        if (parallel && count >= 256)
-        {
-            var textsAddr = (nint)texts;
-            var lensAddr = (nint)textByteLens;
-            Parallel.For(0, count, i =>
-            {
-                var t = ((byte**)textsAddr)[i];
-                var l = ((int*)lensAddr)[i];
-                result[i] = l == 0 || t is null ? string.Empty : Encoding.UTF8.GetString(t, l);
-            });
-        }
-        else
-        {
-            for (var i = 0; i < count; i++)
-            {
-                var t = texts[i];
-                var l = textByteLens[i];
-                result[i] = l == 0 || t is null ? string.Empty : Encoding.UTF8.GetString(t, l);
-            }
-        }
-
-        return result;
     }
 
     /// <summary>Exposes caller-owned native memory as <see cref="Memory{T}"/> without copying.</summary>

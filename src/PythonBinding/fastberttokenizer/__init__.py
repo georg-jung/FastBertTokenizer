@@ -35,20 +35,13 @@ class NativeError(RuntimeError):
     """An error reported by the FastBertTokenizer native library."""
 
 
-def _validate_max_tokens(max_tokens: int) -> None:
-    if max_tokens <= 0:
-        raise ValueError("max_tokens must be > 0.")
-    if max_tokens > 2**31 - 1:
-        raise ValueError(f"max_tokens must be <= {2**31 - 1}.")
-
-
-def _default_lib_names() -> list[str]:
+def _lib_name() -> str:
     system = platform.system()
     if system == "Windows":
-        return ["FastBertTokenizer.Native.dll"]
+        return "FastBertTokenizer.Native.dll"
     if system == "Darwin":
-        return ["FastBertTokenizer.Native.dylib"]
-    return ["FastBertTokenizer.Native.so"]
+        return "FastBertTokenizer.Native.dylib"
+    return "FastBertTokenizer.Native.so"
 
 
 def _default_rid() -> str:
@@ -66,22 +59,16 @@ def _find_library() -> str:
             return override
         raise FileNotFoundError(f"FBT_NATIVE_LIB points to {override!r}, which does not exist.")
 
-    names = _default_lib_names()
-    pkg_dir = pathlib.Path(__file__).resolve().parent
-    # In a built wheel the native lib would ship inside the package; during repo-local
-    # development we fall back to the dotnet publish output.
-    repo_root = pkg_dir.parents[2]
-    publish_dir = (
-        repo_root / "bin" / "FastBertTokenizer.Native" / "Release" / "net10.0" / _default_rid() / "publish"
+    repo_root = pathlib.Path(__file__).resolve().parents[3]
+    candidate = (
+        repo_root / "bin" / "FastBertTokenizer.Native" / "Release" / "net10.0" / _default_rid()
+        / "publish" / _lib_name()
     )
-    candidates = [pkg_dir / n for n in names] + [publish_dir / n for n in names]
-    for candidate in candidates:
-        if candidate.is_file():
-            return str(candidate)
+    if candidate.is_file():
+        return str(candidate)
     raise FileNotFoundError(
-        "FastBertTokenizer native library not found. Looked for "
-        + ", ".join(str(c) for c in candidates)
-        + ". Build it with: dotnet publish src/FastBertTokenizer.Native -c Release -r "
+        f"FastBertTokenizer native library not found. Looked for {candidate}."
+        " Build it with: dotnet publish src/FastBertTokenizer.Native -c Release -r "
         + _default_rid()
     )
 
@@ -108,17 +95,7 @@ def _load(lib_path: str | None) -> ctypes.CDLL:
         ctypes.c_int32,                     # max_tokens
         ctypes.POINTER(ctypes.c_int64),     # input_ids out
         ctypes.POINTER(ctypes.c_int64),     # attention_mask out
-        ctypes.POINTER(ctypes.c_int64),     # token_type_ids out (nullable)
         ctypes.c_int32,                     # parallel
-    ]
-    lib.fbt_encode.restype = ctypes.c_int32
-    lib.fbt_encode.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_char_p,
-        ctypes.c_int32,
-        ctypes.c_int32,
-        ctypes.POINTER(ctypes.c_int64),
-        ctypes.POINTER(ctypes.c_int64),
     ]
     lib.fbt_decode.restype = ctypes.c_int32
     lib.fbt_decode.argtypes = [
@@ -178,7 +155,8 @@ class BertTokenizer:
         padded per row. The arrays can be fed directly to e.g. onnxruntime or torch.
         """
         count = len(texts)
-        _validate_max_tokens(max_tokens)
+        if max_tokens <= 0:
+            raise ValueError("max_tokens must be > 0.")
         # The native side rejects batches larger than this anyway; failing here avoids
         # allocating the (potentially huge) output arrays first.
         if count * max_tokens > 2**31 - 1:
@@ -187,12 +165,8 @@ class BertTokenizer:
             )
 
         encoded = [t.encode("utf-8") for t in texts]
-        if encoded and max(map(len, encoded)) > 2**31 - 1:
-            raise ValueError("a single text must not exceed 2 GiB of UTF-8 bytes.")
-
         input_ids = np.empty((count, max_tokens), dtype=np.int64)
         attention_mask = np.empty((count, max_tokens), dtype=np.int64)
-        token_type_ids = np.empty((count, max_tokens), dtype=np.int64) if return_token_type_ids else None
         text_array = (ctypes.c_char_p * count)(*encoded)
         len_array = (ctypes.c_int32 * count)(*(len(b) for b in encoded))
 
@@ -205,35 +179,18 @@ class BertTokenizer:
             max_tokens,
             input_ids.ctypes.data_as(int64_ptr),
             attention_mask.ctypes.data_as(int64_ptr),
-            token_type_ids.ctypes.data_as(int64_ptr) if token_type_ids is not None else None,
             1 if parallel else 0,
         )
         if rc != 0:
             self._raise("fbt_encode_batch", rc)
-        if token_type_ids is not None:
-            return input_ids, attention_mask, token_type_ids
+        if return_token_type_ids:
+            return input_ids, attention_mask, np.zeros((count, max_tokens), dtype=np.int64)
         return input_ids, attention_mask
 
     def encode(self, text: str, max_tokens: int = 512):
         """Encode a single text. Returns (input_ids, attention_mask) as 1-D numpy int64 arrays."""
-        _validate_max_tokens(max_tokens)
-        data = text.encode("utf-8")
-        if len(data) > 2**31 - 1:
-            raise ValueError("a single text must not exceed 2 GiB of UTF-8 bytes.")
-        input_ids = np.empty(max_tokens, dtype=np.int64)
-        attention_mask = np.empty(max_tokens, dtype=np.int64)
-        int64_ptr = ctypes.POINTER(ctypes.c_int64)
-        rc = self._lib.fbt_encode(
-            self._handle,
-            data,
-            len(data),
-            max_tokens,
-            input_ids.ctypes.data_as(int64_ptr),
-            attention_mask.ctypes.data_as(int64_ptr),
-        )
-        if rc < 0:
-            self._raise("fbt_encode", rc)
-        return input_ids, attention_mask
+        input_ids, attention_mask = self.encode_batch([text], max_tokens, parallel=False)
+        return input_ids[0], attention_mask[0]
 
     def decode(self, token_ids) -> str:
         """Decode token ids (any int sequence or numpy array) back to text."""

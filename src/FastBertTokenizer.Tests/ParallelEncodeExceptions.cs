@@ -38,4 +38,14 @@ public class ParallelEncodeExceptions
         var act = () => uut.Encode(inputs, iids, attm, 1);
         act.ShouldThrow<Exception>();
     }
+
+    [Fact]
+    public async Task EncodingEmptyBatchIsANoOp()
+    {
+        var uut = new BertTokenizer();
+        await uut.LoadTokenizerJsonAsync("data/bert-base-uncased/tokenizer.json");
+
+        Should.NotThrow(() => uut.Encode(Array.Empty<string>(), Array.Empty<long>(), Array.Empty<long>(), 128));
+        Should.NotThrow(() => uut.Encode(Array.Empty<string>(), Array.Empty<long>(), Array.Empty<long>(), Array.Empty<long>(), 128));
+    }
 }

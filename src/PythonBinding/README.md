@@ -30,7 +30,7 @@ tokenization uses all cores via the .NET thread pool.
 
 [`smoke.py`](smoke.py) exercises the C ABI contract itself: handle lifecycle (including
 stale/garbage/double-destroyed handles), error codes and last-error semantics, encode
-return values, per-item argument validation and the decode size-query protocol.
+outputs, per-item argument validation and the decode size-query protocol.
 
 [`verify.py`](verify.py) checks id-level parity against Hugging Face `tokenizers` on the
 benchmark corpus (15,000 simple english wikipedia articles), analogous to
@@ -43,18 +43,23 @@ Result: 3 of 15,000 documents (0.02 %) differ — the same known corpus-level di
 [`bench.py`](bench.py) mirrors the methodology of
 [`../HuggingfaceTokenizer/BenchPython/bench.py`](../HuggingfaceTokenizer/BenchPython/bench.py)
 (same corpus, same vocabulary, truncation at 512 tokens, pyperf). Measured in a 4-vCPU
-Linux x64 container (`pyperf --fast`, so treat as indicative rather than rigorous):
+Linux x64 container with tokie 0.1.4 and tokenizers 0.23.2. FastBertTokenizer and tokie rows
+use pyperf's default settings (mean ± std dev over 20 processes), the Hugging Face rows
+`pyperf --fast`. The container is shared and noisy, so treat the numbers as indicative:
 
 | Called from Python                  | Single-text loop | Batch (parallel) |
 |-------------------------------------|-----------------:|-----------------:|
-| **FastBertTokenizer (this binding)**|       **542 ms** |       **211 ms** |
-| tokie (Rust)                        |          1.11 s  |           830 ms |
-| Hugging Face tokenizers (Rust)      |          11.0 s  |           3.01 s |
+| **FastBertTokenizer (this binding)**|  **757 ± 42 ms** |  **296 ± 43 ms** |
+| tokie (Rust)                        |      723 ± 24 ms |      220 ± 13 ms |
+| Hugging Face tokenizers (Rust)      |          13.7 s  |           3.42 s |
 
-FastBertTokenizer's batch call additionally ran at 531 ms with `parallel=False`. At ~3.66 M
-tokens for the corpus, 211 ms is ≈17 M tokens/s from Python — including the Python → native
+FastBertTokenizer's batch call additionally ran at 617 ms with `parallel=False`. At ~3.66 M
+tokens for the corpus, 296 ms is ≈12 M tokens/s from Python — including the Python → native
 UTF-8 marshalling and numpy allocation, i.e. the interop cost does not eat the library's
-advantage.
+advantage over Hugging Face `tokenizers`. tokie is on par: note that tokie 0.1.0 (released
+2026-07-23) made its batch path roughly 3–4× faster than the 0.0.10 that
+[`../HuggingfaceTokenizer/BenchPython/requirements.txt`](../HuggingfaceTokenizer/BenchPython/requirements.txt)
+pins; against 0.0.10, this binding's batch call was ~4× faster than tokie's in the same setup.
 
 ## What a real release would still need
 
