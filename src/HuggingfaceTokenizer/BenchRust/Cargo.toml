@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 tokenizers = "0.19"
-brotli = "5.0"
+brotli = "9.0"
 serde = "1.0"
 serde_json = "1.0"
 
