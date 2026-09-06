@@ -1,8 +1,7 @@
 // copy of https://github.com/huggingface/tokenizers/blob/8f9b945c75435d9120b71dfd14364d2571d83c0b/tokenizers/benches/common/mod.rs
 
+use std::hint::black_box;
 use std::time::{Duration, Instant};
-
-use criterion::black_box;
 
 use tokenizers::{
     Decoder, EncodeInput, Model, Normalizer, PostProcessor, PreTokenizer, TokenizerImpl,
