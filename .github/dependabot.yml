@@ -4,15 +4,60 @@ updates:
   directory: "/"
   schedule:
     interval: daily
+  groups:
+    nuget:
+      # One PR for all non-breaking NuGet updates; majors stay separate.
+      patterns:
+      - "*"
+      update-types:
+      - minor
+      - patch
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
     interval: daily
+  groups:
+    github-actions:
+      patterns:
+      - "*"
+      update-types:
+      - minor
+      - patch
 - package-ecosystem: "docker"
-  directory: "/"
+  directories:
+  - "/src/HuggingfaceTokenizer/Rest"
   schedule:
     interval: "daily"
+  groups:
+    docker:
+      patterns:
+      - "*"
+      update-types:
+      - minor
+      - patch
 - package-ecosystem: pip
-  directory: "/src/HuggingfaceTokenizer/BenchPython"
+  directories:
+  - "/src/HuggingfaceTokenizer/BenchPython"
+  - "/src/HuggingfaceTokenizer/Rest"
   schedule:
     interval: weekly
+  groups:
+    python:
+      patterns:
+      - "*"
+      update-types:
+      - minor
+      - patch
+- package-ecosystem: cargo
+  directories:
+  - "/src/HuggingfaceTokenizer/BenchRust"
+  - "/src/HuggingfaceTokenizer/RustLib"
+  schedule:
+    interval: weekly
+  groups:
+    rust:
+      patterns:
+      - "*"
+      update-types:
+      - minor
+      - patch
