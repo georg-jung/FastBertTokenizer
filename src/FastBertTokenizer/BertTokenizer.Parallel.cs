@@ -63,6 +63,11 @@ public partial class BertTokenizer
             throw new ArgumentException($"{nameof(inputIds)} and {nameof(attentionMask)} must have {resultLen} elements, but had {inputIds.Length} and {attentionMask.Length}.");
         }
 
+        if (inputs.Length == 0)
+        {
+            return;
+        }
+
         Tuple<int, int>[] ranges;
         if (_rangeCache is { } rc && rc.Count == inputs.Length)
         {
