@@ -53,11 +53,23 @@ internal ref struct PreTokenizingEnumerator
 
     public bool MoveNext()
     {
+        var charClasses = _addedTokens.CharClasses;
         while (currentIndex < _input.Length)
         {
             var c = _input[currentIndex];
+            var cls = charClasses[c];
 
-            if (_addedTokens.FirstLetters.Contains(c) && StartsWithAddedToken(_input.Slice(currentIndex)) is (int len, bool normalize))
+            if (cls == 0)
+            {
+                // Ordinary word char; by far the most common case.
+                if (start == -1)
+                {
+                    start = currentIndex;
+                }
+
+                currentIndex++;
+            }
+            else if ((cls & AddedTokens.CharClassAddedTokenFirstLetter) != 0 && StartsWithAddedToken(_input.Slice(currentIndex)) is (int len, bool normalize))
             {
                 if (Flush())
                 {
@@ -68,7 +80,7 @@ internal ref struct PreTokenizingEnumerator
                 currentIndex += len;
                 return true;
             }
-            else if (char.IsWhiteSpace(c))
+            else if ((cls & AddedTokens.CharClassWhitespace) != 0)
             {
                 if (Flush())
                 {
@@ -78,7 +90,7 @@ internal ref struct PreTokenizingEnumerator
 
                 currentIndex++;
             }
-            else if (IsPunctuation(c) || IsChineseCharacter(c))
+            else if ((cls & AddedTokens.CharClassPunctuationOrChinese) != 0)
             {
                 if (Flush())
                 {
@@ -91,6 +103,8 @@ internal ref struct PreTokenizingEnumerator
             }
             else
             {
+                // A char that is only flagged as a possible added token first letter but
+                // didn't actually start an added token; treat it as an ordinary word char.
                 if (start == -1)
                 {
                     start = currentIndex;
@@ -178,7 +192,8 @@ internal ref struct PreTokenizingEnumerator
     /// <returns>True we consider the character a punctuation character, otherwise false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1204:Static elements should appear before instance elements", Justification = "Makes more sense here.")]
-    private static bool IsPunctuation(char cp)
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Makes more sense here.")]
+    internal static bool IsPunctuation(char cp)
     {
         // We treat all non-letter/number ASCII as punctuation.
         // Characters such as "^", "$", and "`" are not in the Unicode
@@ -207,7 +222,7 @@ internal ref struct PreTokenizingEnumerator
     /// <param name="cp">Char to check.</param>
     /// <returns>True if passed char is a chinese char.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsChineseCharacter(char cp)
+    internal static bool IsChineseCharacter(char cp)
     {
         // This defines a "chinese character" as anything in the CJK Unicode block:
         //   https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
