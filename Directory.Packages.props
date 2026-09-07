@@ -36,7 +36,7 @@
     <PackageVersion Include="System.Memory" Version="4.6.3" />
     <!-- Deliberately the lowest patched version of the 8.x LTS line: this is the dependency
          floor forced upon netstandard2.0 consumers of the shipped FastBertTokenizer package. -->
-    <PackageVersion Include="System.Text.Json" Version="8.0.6" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.11" />
     <PackageVersion Include="System.Threading.Channels" Version="10.0.11" />
     <PackageVersion Include="Verify.Xunit" Version="31.12.5" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
