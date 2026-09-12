@@ -33,6 +33,8 @@ public partial class BertTokenizer
     private Dictionary<StringSpanOrdinalKey, long>? _prefixes;
     private Dictionary<StringSpanOrdinalKey, long>? _suffixes;
 #endif
+    private int _maxPrefixLength;
+    private int _maxSuffixLength;
     private (int Id, string Token) _unk = default!;
     private (int Id, string Token) _cls = default!;
     private (int Id, string Token) _sep = default!;
@@ -550,7 +552,11 @@ public partial class BertTokenizer
         }
 
         // No null checks for _prefixes and _suffixes because this is a private method.
-        var prefix = word;
+
+        // Candidates longer than the longest entry in the vocabulary can never match, so start
+        // shrinking at that length. Every failed lookup hashes the whole candidate, thus without
+        // this cap a single word of length n costs O(n^2) char hashing before the first match.
+        var prefix = word.Slice(0, Math.Min(word.Length, _maxPrefixLength));
         var cnt = 0;
         long id = -1;
 
@@ -577,7 +583,7 @@ public partial class BertTokenizer
         offset += prefix.Length;
         while (remaining.Length > 0 && cnt < tokenIdSink.Length)
         {
-            var suffix = remaining;
+            var suffix = remaining.Slice(0, Math.Min(remaining.Length, _maxSuffixLength));
             id = -1;
 
             while (suffix.Length > 0)
@@ -604,6 +610,41 @@ public partial class BertTokenizer
 
         return cnt;
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    /// Determines the length of the longest key of the given vocabulary dictionary.
+    /// </summary>
+    /// <param name="dict">The dictionary to inspect.</param>
+    /// <returns>The length of the longest key, or 0 if the dictionary is empty.</returns>
+    private static int MaxKeyLength(Dictionary<string, long> dict)
+    {
+        var max = 0;
+        foreach (var key in dict.Keys)
+        {
+            max = Math.Max(max, key.Length);
+        }
+
+        return max;
+    }
+#else
+    /// <summary>
+    /// Determines the length of the longest key of the given vocabulary dictionary.
+    /// </summary>
+    /// <param name="dict">The dictionary to inspect.</param>
+    /// <returns>The length of the longest key, or 0 if the dictionary is empty.</returns>
+    private static int MaxKeyLength(Dictionary<StringSpanOrdinalKey, long> dict)
+    {
+        var max = 0;
+        foreach (var key in dict.Keys)
+        {
+            // Keys that are stored in the dictionary are always string-backed; only lookups use the span-backed form.
+            max = Math.Max(max, key.Data!.Length);
+        }
+
+        return max;
+    }
+#endif
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool TryGetPrefixId(ReadOnlySpan<char> prefix, out long id)
