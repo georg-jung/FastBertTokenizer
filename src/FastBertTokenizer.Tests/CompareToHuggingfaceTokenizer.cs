@@ -192,6 +192,28 @@ namespace FastBertTokenizer.Tests
         [InlineData("In this [UNK] other [unk] example[pAd], [c ls] special tokens [sep] also [Pad] app[CLS]ear in unusal [ PAD] casing.[PAD]")]
         [InlineData("a abcd bcd abcd cd ab asdf AB ABCD CD A D CD X AbCd")]
         [InlineData("[pAd]")]
+        [InlineData("")]
+        [InlineData(" \t\n ")]
+        [InlineData("[CLS][SEP]x[PAD].[UNK]")]
+
+        // Added tokens of the issue-100 tokenizer start with digits, '-' and cyrillic letters; near misses must fall through to normal pre-tokenization.
+        [InlineData("09.52 09.53 0952 -1Рус. -2 англ. Англ.6")]
+
+        // Whitespace that is not a plain space: tab, lf, cr, nbsp, ideographic space, line and paragraph separators, hair space.
+        // Not included: vertical tab, form feed and next line (U+0085). Hugging Face removes those as control chars while we split on them.
+        [InlineData("a\tb\nc\rd\u00A0e\u3000f\u2028g\u2029h\u200Ai")]
+
+        // Control chars and the replacement char are neither whitespace nor punctuation and get removed.
+        [InlineData("x\u001Cy\u001Fz\u007Fw\u0001v\uFFFDu")]
+
+        // CJK ideographs are single tokens, kana and hangul are not; unicode and ascii punctuation.
+        [InlineData("中文abc,你好。日本語テキスト한국어")]
+
+        // Known divergences from Hugging Face. Kept as skipped rows so they are documented and can be enabled once fixed.
+        [InlineData("a\u000Bb\u000Cc\u0085d", Skip = "Hugging Face removes vertical tab, form feed and next line (U+0085) as control chars and encodes 'abcd'; we split on them as whitespace.")]
+        [InlineData("англия", Skip = "Hugging Face encodes this as one token with the issue-100 tokenizer; we match its normalized added token 'Англ' case-insensitively although that tokenizer is cased.")]
+        [InlineData("a\u001Cbcd", Skip = "Hugging Face matches normalized added tokens after clean_text, so the added-token-order tokenizer yields 'abcd'; we match added tokens on the raw input and yield 'a' [UNK].")]
+        [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Skip = "Words longer than max_input_chars_per_word (100 chars) should become a single [UNK] like in Hugging Face; we encode them piece by piece.")]
         public void CompareSomeCraftedExampleStrings(string value)
         {
             CompareImpl(null, value);
