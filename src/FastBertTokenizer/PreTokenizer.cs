@@ -21,6 +21,7 @@ internal class PreTokenizer
 #else
     private readonly char[] _addedTokenFirstLetters;
 #endif
+    private readonly CharClass[] _asciiCharClasses;
 
     public PreTokenizer(IEnumerable<(string Content, bool Normalize)> addedTokens)
     {
@@ -38,6 +39,13 @@ internal class PreTokenizer
 #else
         _addedTokenFirstLetters = [.. firstLettersToSearch];
 #endif
+
+        // ClassifySlow reads _addedTokenFirstLetters, so the table must be filled after it is assigned.
+        _asciiCharClasses = new CharClass[128];
+        for (var i = 0; i < _asciiCharClasses.Length; i++)
+        {
+            _asciiCharClasses[i] = ClassifySlow((char)i);
+        }
     }
 
     /// <summary>
@@ -79,18 +87,10 @@ internal class PreTokenizer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CharClass Classify(char c)
     {
-        var res = char.IsWhiteSpace(c)
-            ? CharClass.Whitespace
-            : IsPunctuation(c) || IsChineseCharacter(c)
-                ? CharClass.Punctuation
-                : CharClass.Word;
-
-        if (_addedTokenFirstLetters.Contains(c))
-        {
-            res |= CharClass.MayStartAddedToken;
-        }
-
-        return res;
+        // ASCII chars typically make up the vast majority of the input. For them, this single lookup replaces the
+        // whitespace, punctuation, chinese char and added token first letter checks that all other chars go through.
+        var asciiCharClasses = _asciiCharClasses;
+        return c < asciiCharClasses.Length ? asciiCharClasses[c] : ClassifySlow(c);
     }
 
     /// <summary>
@@ -179,5 +179,27 @@ internal class PreTokenizer
 #pragma warning restore SA1025 // Code should not contain multiple whitespace in a row
 
         return false;
+    }
+
+    /// <summary>
+    /// The predicate based classification that <see cref="Classify"/> uses for non-ASCII chars
+    /// and that the ASCII table is filled from.
+    /// </summary>
+    /// <param name="c">Char to classify.</param>
+    /// <returns>The class of the given char.</returns>
+    private CharClass ClassifySlow(char c)
+    {
+        var res = char.IsWhiteSpace(c)
+            ? CharClass.Whitespace
+            : IsPunctuation(c) || IsChineseCharacter(c)
+                ? CharClass.Punctuation
+                : CharClass.Word;
+
+        if (_addedTokenFirstLetters.Contains(c))
+        {
+            res |= CharClass.MayStartAddedToken;
+        }
+
+        return res;
     }
 }
