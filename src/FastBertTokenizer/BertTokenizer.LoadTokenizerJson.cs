@@ -165,7 +165,7 @@ public partial class BertTokenizer
             prefixes[addedToken.Content] = addedToken.Id;
         }
 
-        _addedTokens = new(tok.AddedTokens.Select(x => (x.Content, x.Normalized)).OrderByDescending(x => x.Content.Length));
+        _preTokenizer = new(tok.AddedTokens.Select(x => (x.Content, x.Normalized)).OrderByDescending(x => x.Content.Length));
 
 #if NET8_0_OR_GREATER
         _prefixes = prefixes.ToFrozenDictionary();

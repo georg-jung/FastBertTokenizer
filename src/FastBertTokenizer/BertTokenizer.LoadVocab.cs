@@ -162,7 +162,7 @@ public partial class BertTokenizer
             _lowercaseInput = convertInputToLowercase;
             _decoderPrefix = VocabTxtDefaultContinuingSubwordPrefix;
             _normalization = normalization;
-            _addedTokens = new([(unknownToken, false), (clsToken, false), (sepToken, false), (padToken, false)]);
+            _preTokenizer = new([(unknownToken, false), (clsToken, false), (sepToken, false), (padToken, false)]);
         }
     }
 }

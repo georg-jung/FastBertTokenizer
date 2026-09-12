@@ -40,7 +40,7 @@ public partial class BertTokenizer
     private bool _lowercaseInput;
     private bool _stripAccents = true;
     private NormalizationForm _normalization;
-    private AddedTokens _addedTokens = default!;
+    private PreTokenizer _preTokenizer = default!;
     private string _decoderPrefix = default!;
     private bool _cleanupTokenizationSpaces = true;
 
@@ -222,7 +222,7 @@ public partial class BertTokenizer
 
         lastTokenizedWordStartIndex = 0;
         bool moreRemainingInput = false;
-        foreach (var pivot in new PreTokenizingEnumerator(input, _lowercaseInput, _normalization, _addedTokens, inputOffset))
+        foreach (var pivot in _preTokenizer.PreTokenize(input, _lowercaseInput, _normalization, inputOffset))
         {
             lastTokenizedWordStartIndex = pivot.SegmentStartIndex;
             var offset = 0;
