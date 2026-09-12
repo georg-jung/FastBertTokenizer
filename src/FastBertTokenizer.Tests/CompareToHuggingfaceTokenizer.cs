@@ -209,6 +209,14 @@ namespace FastBertTokenizer.Tests
         // CJK ideographs are single tokens, kana and hangul are not; unicode and ascii punctuation.
         [InlineData("中文abc,你好。日本語テキスト한국어")]
 
+        // Word pieces are matched starting at the length of the longest vocabulary entry. "telecommunications"
+        // is exactly that longest entry for bert-base-uncased, the other words are longer than it and thus
+        // have to be assembled from several pieces. Words of more than 100 chars are not covered here, see
+        // the max_input_chars_per_word divergence below.
+        [InlineData("telecommunications and pneumonoultramicroscopicsilicovolcanoconiosis, antidisestablishmentarianism deforestation")]
+        [InlineData("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")]
+        [InlineData("abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij")]
+
         // Known divergences from Hugging Face. Kept as skipped rows so they are documented and can be enabled once fixed.
         [InlineData("a\u000Bb\u000Cc\u0085d", Skip = "Hugging Face removes vertical tab, form feed and next line (U+0085) as control chars and encodes 'abcd'; we split on them as whitespace.")]
         [InlineData("англия", Skip = "Hugging Face encodes this as one token with the issue-100 tokenizer; we match its normalized added token 'Англ' case-insensitively although that tokenizer is cased.")]
