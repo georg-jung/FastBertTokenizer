@@ -12,6 +12,11 @@ updates:
       update-types:
       - minor
       - patch
+  ignore:
+  # Deliberately held at the lowest patched 8.x version, see Directory.Packages.props.
+  - dependency-name: System.Text.Json
+    update-types:
+    - version-update:semver-major
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:

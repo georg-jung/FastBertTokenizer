@@ -76,52 +76,52 @@ uploads the complete `BenchmarkDotNet.Artifacts` results as workflow artifacts.
 
 ## Results
 
-Numbers below are from [this full CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/29692334350)
+Numbers below are from [this full CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/34832739276)
 on a shared GitHub Actions runner. They are reproducible by anyone, but noisier than numbers
 from dedicated hardware — treat small differences as noise, and note that multi-threaded
 results depend on the runner's (few) cores.
 
 ```txt
-BenchmarkDotNet v0.15.8, Linux Ubuntu 24.04.4 LTS (Noble Numbat)
-AMD EPYC 9V74 2.60GHz, 1 CPU, 4 logical and 2 physical cores (GitHub Actions shared runner)
-.NET SDK 10.0.302
+BenchmarkDotNet v0.15.8, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
+AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores (GitHub Actions shared runner)
+.NET SDK 10.0.401
 ```
 
 ### FastBertTokenizer usage patterns: .NET 8 vs. .NET 10
 
 * Workload: Encode up to 512 tokens from each of the 15,000 articles (3,657,145 tokens produced).
-* ~12.5m tokens/s single threaded, ~31.6m tokens/s multi threaded on the runner's 4 vCPUs.
+* ~14.5m tokens/s single threaded, ~35.3m tokens/s multi threaded on the runner's 4 vCPUs.
 * `local` jobs measure the working tree built from source, `nuget` jobs the released baseline package.
 
 | Method                       | Job                  | Runtime   | Mean     | Error   | StdDev  | Ratio | Allocated    | Alloc Ratio |
 |----------------------------- |--------------------- |---------- |---------:|--------:|--------:|------:|-------------:|------------:|
-| SinglethreadedAllocating     | local-net10.0        | .NET 10.0 | 293.4 ms | 3.31 ms | 3.09 ms |  1.00 |   2039.61 KB |        1.00 |
-| SingleThreadedMemReuse       | local-net10.0        | .NET 10.0 | 289.0 ms | 2.98 ms | 2.64 ms |  0.99 |    996.98 KB |        0.49 |
-| MultithreadedMemReuseBatched | local-net10.0        | .NET 10.0 | 115.6 ms | 2.31 ms | 4.27 ms |  0.39 |  13006.03 KB |        6.38 |
-| MultithreadedMemReuseAtOnce  | local-net10.0        | .NET 10.0 | 116.8 ms | 1.74 ms | 1.54 ms |  0.40 | 180987.01 KB |       88.74 |
-| ParallelBatchEnumerator      | local-net10.0        | .NET 10.0 | 234.4 ms | 2.64 ms | 2.47 ms |  0.80 |   4795.53 KB |        2.35 |
-| BatchEnumerator              | local-net10.0        | .NET 10.0 | 458.1 ms | 6.92 ms | 6.13 ms |  1.56 |   2308.48 KB |        1.13 |
+| SinglethreadedAllocating     | local-net10.0        | .NET 10.0 | 252.5 ms | 2.04 ms | 1.91 ms |  1.00 |   2039.61 KB |        1.00 |
+| SingleThreadedMemReuse       | local-net10.0        | .NET 10.0 | 230.3 ms | 1.53 ms | 1.43 ms |  0.91 |    996.98 KB |        0.49 |
+| MultithreadedMemReuseBatched | local-net10.0        | .NET 10.0 | 103.6 ms | 2.06 ms | 3.39 ms |  0.41 |  13009.16 KB |        6.38 |
+| MultithreadedMemReuseAtOnce  | local-net10.0        | .NET 10.0 | 101.7 ms | 1.27 ms | 1.18 ms |  0.40 | 180987.01 KB |       88.74 |
+| ParallelBatchEnumerator      | local-net10.0        | .NET 10.0 | 202.3 ms | 2.82 ms | 2.50 ms |  0.80 |   4793.70 KB |        2.35 |
+| BatchEnumerator              | local-net10.0        | .NET 10.0 | 408.1 ms | 5.17 ms | 4.58 ms |  1.62 |   2308.48 KB |        1.13 |
 |                              |                      |           |          |         |         |       |              |             |
-| SinglethreadedAllocating     | local-net8.0         | .NET 8.0  | 296.6 ms | 2.84 ms | 2.66 ms |  1.00 |   2039.61 KB |        1.00 |
-| SingleThreadedMemReuse       | local-net8.0         | .NET 8.0  | 302.0 ms | 3.97 ms | 3.71 ms |  1.02 |    996.98 KB |        0.49 |
-| MultithreadedMemReuseBatched | local-net8.0         | .NET 8.0  | 130.7 ms | 2.34 ms | 2.88 ms |  0.44 |  13006.34 KB |        6.38 |
-| MultithreadedMemReuseAtOnce  | local-net8.0         | .NET 8.0  | 130.0 ms | 1.43 ms | 1.34 ms |  0.44 | 180986.88 KB |       88.74 |
-| ParallelBatchEnumerator      | local-net8.0         | .NET 8.0  | 252.7 ms | 4.03 ms | 3.77 ms |  0.85 |   4798.02 KB |        2.35 |
-| BatchEnumerator              | local-net8.0         | .NET 8.0  | 479.5 ms | 4.21 ms | 3.94 ms |  1.62 |   2308.48 KB |        1.13 |
+| SinglethreadedAllocating     | local-net8.0         | .NET 8.0  | 308.8 ms | 2.81 ms | 2.63 ms |  1.00 |   2039.61 KB |        1.00 |
+| SingleThreadedMemReuse       | local-net8.0         | .NET 8.0  | 312.9 ms | 3.92 ms | 3.67 ms |  1.01 |    996.98 KB |        0.49 |
+| MultithreadedMemReuseBatched | local-net8.0         | .NET 8.0  | 122.7 ms | 2.16 ms | 1.81 ms |  0.40 |  13006.28 KB |        6.38 |
+| MultithreadedMemReuseAtOnce  | local-net8.0         | .NET 8.0  | 125.1 ms | 1.16 ms | 1.09 ms |  0.41 | 180986.88 KB |       88.74 |
+| ParallelBatchEnumerator      | local-net8.0         | .NET 8.0  | 240.7 ms | 2.46 ms | 2.30 ms |  0.78 |   4797.59 KB |        2.35 |
+| BatchEnumerator              | local-net8.0         | .NET 8.0  | 481.2 ms | 9.34 ms | 9.60 ms |  1.56 |   2308.48 KB |        1.13 |
 |                              |                      |           |          |         |         |       |              |             |
-| SinglethreadedAllocating     | nuget-1.0.28-net10.0 | .NET 10.0 | 282.0 ms | 1.22 ms | 1.08 ms |  1.00 |   2039.61 KB |        1.00 |
-| SingleThreadedMemReuse       | nuget-1.0.28-net10.0 | .NET 10.0 | 287.7 ms | 2.55 ms | 2.39 ms |  1.02 |    996.98 KB |        0.49 |
-| MultithreadedMemReuseBatched | nuget-1.0.28-net10.0 | .NET 10.0 | 112.1 ms | 2.20 ms | 2.06 ms |  0.40 |  13009.12 KB |        6.38 |
-| MultithreadedMemReuseAtOnce  | nuget-1.0.28-net10.0 | .NET 10.0 | 114.7 ms | 1.92 ms | 1.80 ms |  0.41 | 180987.01 KB |       88.74 |
-| ParallelBatchEnumerator      | nuget-1.0.28-net10.0 | .NET 10.0 | 222.3 ms | 2.96 ms | 2.77 ms |  0.79 |   4796.37 KB |        2.35 |
-| BatchEnumerator              | nuget-1.0.28-net10.0 | .NET 10.0 | 452.6 ms | 7.66 ms | 6.79 ms |  1.61 |   2308.48 KB |        1.13 |
+| SinglethreadedAllocating     | nuget-1.0.28-net10.0 | .NET 10.0 | 291.1 ms | 3.78 ms | 3.35 ms |  1.00 |   2039.61 KB |        1.00 |
+| SingleThreadedMemReuse       | nuget-1.0.28-net10.0 | .NET 10.0 | 279.3 ms | 1.89 ms | 1.77 ms |  0.96 |    996.98 KB |        0.49 |
+| MultithreadedMemReuseBatched | nuget-1.0.28-net10.0 | .NET 10.0 | 120.6 ms | 2.30 ms | 1.92 ms |  0.41 |  13006.03 KB |        6.38 |
+| MultithreadedMemReuseAtOnce  | nuget-1.0.28-net10.0 | .NET 10.0 | 122.4 ms | 2.37 ms | 2.22 ms |  0.42 | 180987.01 KB |       88.74 |
+| ParallelBatchEnumerator      | nuget-1.0.28-net10.0 | .NET 10.0 | 237.8 ms | 2.67 ms | 2.37 ms |  0.82 |   4802.96 KB |        2.35 |
+| BatchEnumerator              | nuget-1.0.28-net10.0 | .NET 10.0 | 467.4 ms | 1.93 ms | 1.80 ms |  1.61 |   2308.48 KB |        1.13 |
 |                              |                      |           |          |         |         |       |              |             |
-| SinglethreadedAllocating     | nuget-1.0.28-net8.0  | .NET 8.0  | 307.4 ms | 2.49 ms | 2.33 ms |  1.00 |   2039.61 KB |        1.00 |
-| SingleThreadedMemReuse       | nuget-1.0.28-net8.0  | .NET 8.0  | 304.1 ms | 2.08 ms | 1.84 ms |  0.99 |    996.98 KB |        0.49 |
-| MultithreadedMemReuseBatched | nuget-1.0.28-net8.0  | .NET 8.0  | 152.5 ms | 3.04 ms | 3.62 ms |  0.50 |  13006.34 KB |        6.38 |
-| MultithreadedMemReuseAtOnce  | nuget-1.0.28-net8.0  | .NET 8.0  | 161.2 ms | 2.30 ms | 2.15 ms |  0.52 | 180986.88 KB |       88.74 |
-| ParallelBatchEnumerator      | nuget-1.0.28-net8.0  | .NET 8.0  | 274.2 ms | 3.46 ms | 3.23 ms |  0.89 |   4808.74 KB |        2.36 |
-| BatchEnumerator              | nuget-1.0.28-net8.0  | .NET 8.0  | 496.6 ms | 4.43 ms | 4.15 ms |  1.62 |   2308.48 KB |        1.13 |
+| SinglethreadedAllocating     | nuget-1.0.28-net8.0  | .NET 8.0  | 377.2 ms | 3.19 ms | 2.98 ms |  1.00 |   2039.61 KB |        1.00 |
+| SingleThreadedMemReuse       | nuget-1.0.28-net8.0  | .NET 8.0  | 283.3 ms | 1.52 ms | 1.35 ms |  0.75 |    996.98 KB |        0.49 |
+| MultithreadedMemReuseBatched | nuget-1.0.28-net8.0  | .NET 8.0  | 130.2 ms | 2.58 ms | 3.17 ms |  0.35 |  13006.35 KB |        6.38 |
+| MultithreadedMemReuseAtOnce  | nuget-1.0.28-net8.0  | .NET 8.0  | 161.1 ms | 2.64 ms | 2.47 ms |  0.43 | 180987.09 KB |       88.74 |
+| ParallelBatchEnumerator      | nuget-1.0.28-net8.0  | .NET 8.0  | 306.9 ms | 1.80 ms | 1.60 ms |  0.81 |   4798.42 KB |        2.35 |
+| BatchEnumerator              | nuget-1.0.28-net8.0  | .NET 8.0  | 604.7 ms | 4.16 ms | 4.09 ms |  1.60 |   2308.48 KB |        1.13 |
 
 ### vs. other tokenizer libraries for .NET
 
@@ -133,10 +133,10 @@ All single threaded on .NET 10, same environment and run as above:
 
 | Method                | Mean       | Error    | StdDev   | Ratio | Allocated    | Alloc Ratio |
 |---------------------- |-----------:|---------:|---------:|------:|-------------:|------------:|
-| FastBertTokenizer     |   291.9 ms |  3.40 ms |  3.02 ms |  1.00 |   2039.61 KB |       1.000 |
-| MicrosoftMLTokenizers |   813.5 ms |  6.50 ms |  6.08 ms |  2.79 | 106349.56 KB |      52.142 |
-| BlingFire             | 1,260.7 ms |  2.42 ms |  2.14 ms |  4.32 |      0.02 KB |       0.000 |
-| TokenizersDotNet      | 5,311.9 ms | 45.17 ms | 42.25 ms | 18.20 |  14778.24 KB |       7.246 |
+| FastBertTokenizer     |   265.2 ms |  2.38 ms |  2.22 ms |  1.00 |   2039.61 KB |       1.000 |
+| MicrosoftMLTokenizers |   785.3 ms |  1.25 ms |  1.17 ms |  2.96 | 106349.56 KB |      52.142 |
+| BlingFire             | 1,218.7 ms |  2.32 ms |  2.05 ms |  4.59 |      0.02 KB |       0.000 |
+| TokenizersDotNet      | 4,870.8 ms | 12.25 ms | 10.86 ms | 18.37 |  14778.24 KB |       7.246 |
 
 Fairness notes: the libraries don't do exactly the same work — FastBertTokenizer emits
 input_ids and attention_mask, Microsoft.ML.Tokenizers and Tokenizers.DotNet emit just
@@ -156,19 +156,19 @@ Correctness also differs: FastBertTokenizer's output is
 
 ### Cross-language: Hugging Face tokenizers (Rust), flash-tokenizer (C++) and tokie (Rust)
 
-From the [same CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/29692334350)
-(Python 3.12, tokenizers 0.23.1, flash-tokenizer 1.2.0, tokie 0.0.10), measured from Python — the way
+From the [same CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/34832739276)
+(Python 3.12, tokenizers 0.23.2, flash-tokenizer 1.2.0, tokie 0.1.4), measured from Python — the way
 virtually all users of these libraries consume them — tokenizing the full corpus once:
 
 | Benchmark                        | Mean          |
 |--------------------------------- |--------------:|
-| hf_tokenizers_singlethreaded     | 9.13 s ± 0.05 |
-| flash_tokenizer_singlethreaded   | 1.02 s ± 0.00 |
-| tokie_sequential_calls           |   817 ms ± 11 |
-| hf_tokenizers_batch (parallel)   | 4.10 s ± 0.03 |
-| flash_tokenizer_batch (parallel) |   731 ms ± 20 |
-| flash_tokenizer_batch_ids_only   |    489 ms ± 2 |
-| tokie_batch (parallel)           |    634 ms ± 5 |
+| hf_tokenizers_singlethreaded     | 9.30 s ± 0.11 |
+| flash_tokenizer_singlethreaded   | 1.13 s ± 0.04 |
+| tokie_sequential_calls           |   513 ms ± 12 |
+| hf_tokenizers_batch (parallel)   | 3.93 s ± 0.03 |
+| flash_tokenizer_batch (parallel) |   767 ms ± 24 |
+| flash_tokenizer_batch_ids_only   |    502 ms ± 5 |
+| tokie_batch (parallel)           |    230 ms ± 6 |
 
 The single-threaded Hugging Face number includes per-call Python overhead; the batch mode
 amortizes that and additionally parallelizes across documents, so these numbers don't
@@ -179,5 +179,5 @@ without that. tokie may parallelize internally even for single calls, so read it
 `tokie_sequential_calls` number as "sequential API calls", not necessarily "one core".
 An id-level parity check (`verify.py`) shows flash-tokenizer produces ids identical to
 Hugging Face tokenizers for 99.6% of the corpus documents, while tokie matches exactly.
-For scale: FastBertTokenizer tokenizes the same corpus single threaded in ~0.3 s in the
-same CI run (tables above).
+For scale: FastBertTokenizer tokenizes the same corpus in ~0.25 s single threaded and
+~0.1 s multi threaded in the same CI run (tables above).

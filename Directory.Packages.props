@@ -11,7 +11,7 @@
     <GlobalPackageReference Include="StyleCop.Analyzers.Unstable" Version="1.2.0.556" />
   </ItemGroup>
   <ItemGroup>
-    <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />
+    <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
@@ -28,8 +28,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
     <PackageVersion Include="LiteDB" Version="5.0.21" />
-    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.29.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.30.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
     <PackageVersion Include="PolySharp" Version="1.16.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="SimpleSIMD" Version="4.6.0" />
@@ -37,7 +37,7 @@
     <!-- Deliberately the lowest patched version of the 8.x LTS line: this is the dependency
          floor forced upon netstandard2.0 consumers of the shipped FastBertTokenizer package. -->
     <PackageVersion Include="System.Text.Json" Version="8.0.6" />
-    <PackageVersion Include="System.Threading.Channels" Version="10.0.11" />
+    <PackageVersion Include="System.Threading.Channels" Version="10.0.12" />
     <PackageVersion Include="Verify.Xunit" Version="31.12.5" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />

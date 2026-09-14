@@ -53,19 +53,19 @@ Note: FastBertTokenizer currently does not support encoding two pieces of text i
 
 ## Speed / Benchmarks
 
-> tl;dr: FastBertTokenizer can encode 1 GB of text in around 2 s on a typical notebook CPU from 2020 (measured multi-threaded on a ThinkPad T14s Gen 1, AMD Ryzen 7 PRO 4750U, with v1.x: ~51 ms for the ~26 MB benchmark corpus on .NET 8).
+> tl;dr: FastBertTokenizer encodes ~14.5 million tokens per second on a single core, enough to tokenize a full-length novel in under 10 ms. Batched across the 4 vCPUs of a GitHub Actions runner, that grows to ~35 million tokens per second.
 
-Market overview from [a full CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/29692334350) (GitHub Actions shared runner, `ubuntu-24.04`, 4 vCPUs): tokenizing 15,000 simple english wikipedia articles (3,657,145 tokens) with bert-base-uncased's vocabulary, truncated to 512 tokens per input. For FastBertTokenizer that is ~12.5m tokens/s single threaded and ~31.6m tokens/s multi threaded.
+Market overview from [a full CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/34832739276) (GitHub Actions shared runner, `ubuntu-24.04`, 4 vCPUs): tokenizing 15,000 simple english wikipedia articles (3,657,145 tokens) with bert-base-uncased's vocabulary, truncated to 512 tokens per input. For FastBertTokenizer that is ~14.5m tokens/s single threaded and ~35.3m tokens/s multi threaded.
 
 | Library                                                                            | Measured from | Single threaded | Parallel |
 |----------------------------------------------------------------------------------- |-------------- |----------------:|---------:|
-| **FastBertTokenizer**                                                              | .NET          |      **292 ms** | **116 ms** |
-| [Microsoft.ML.Tokenizers](https://www.nuget.org/packages/Microsoft.ML.Tokenizers)  | .NET          |          814 ms |        — |
-| [tokie](https://github.com/chonkie-inc/tokie) (Rust)                               | Python        |          817 ms |   634 ms |
-| [flash-tokenizer](https://github.com/NLPOptimize/flash-tokenizer) (C++)            | Python        |          1.02 s |   731 ms |
-| [BlingFire](https://github.com/microsoft/BlingFire) (C++)                          | .NET          |          1.26 s |        — |
-| [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (HF bindings)  | .NET          |          5.31 s |        — |
-| [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) (Rust)        | Python        |          9.13 s |   4.10 s |
+| **FastBertTokenizer**                                                              | .NET          |      **265 ms** | **104 ms** |
+| [tokie](https://github.com/chonkie-inc/tokie) (Rust)                               | Python        |          513 ms |   230 ms |
+| [Microsoft.ML.Tokenizers](https://www.nuget.org/packages/Microsoft.ML.Tokenizers)  | .NET          |          785 ms |        — |
+| [flash-tokenizer](https://github.com/NLPOptimize/flash-tokenizer) (C++)            | Python        |          1.13 s |   767 ms |
+| [BlingFire](https://github.com/microsoft/BlingFire) (C++)                          | .NET          |          1.22 s |        — |
+| [Tokenizers.DotNet](https://github.com/sappho192/Tokenizers.DotNet) (HF bindings)  | .NET          |          4.87 s |        — |
+| [Hugging Face tokenizers](https://github.com/huggingface/tokenizers) (Rust)        | Python        |          9.30 s |   3.93 s |
 
 The libraries don't all do exactly the same work and cross-language numbers are only roughly comparable: e.g. Hugging Face tokenizers' single-threaded number includes per-call Python overhead, and tokie may use multiple cores even for sequential calls. See [`src/Benchmarks/README.md`](src/Benchmarks/README.md) for all detailed results (incl. FastBertTokenizer's different usage patterns and runtimes), the exact environment, fairness notes, and how to run the benchmarks yourself.
 
