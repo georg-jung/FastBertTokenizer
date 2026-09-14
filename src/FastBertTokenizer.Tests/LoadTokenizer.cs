@@ -94,7 +94,6 @@ public class LoadTokenizer
         await tokenizer.LoadTokenizerJsonAsync("data/with-empty-token.json");
     }
 
-#if !NETFRAMEWORK
     [Theory]
     [InlineData("bert-base-uncased")]
     public async Task LoadFromHuggingFace(string huggingFaceRepo)
@@ -102,7 +101,6 @@ public class LoadTokenizer
         var tokenizer = new BertTokenizer();
         await tokenizer.LoadFromHuggingFaceAsync(huggingFaceRepo);
     }
-#endif
 
     [Fact]
     public async Task PreventLoadAfterLoad()

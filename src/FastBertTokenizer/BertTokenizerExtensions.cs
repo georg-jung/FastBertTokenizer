@@ -3,7 +3,6 @@
 
 namespace FastBertTokenizer;
 
-#if !NETSTANDARD2_0
 public static class BertTokenizerExtensions
 {
     /// <summary>
@@ -20,4 +19,3 @@ public static class BertTokenizerExtensions
         await tokenizer.LoadTokenizerJsonAsync(hc, url);
     }
 }
-#endif
