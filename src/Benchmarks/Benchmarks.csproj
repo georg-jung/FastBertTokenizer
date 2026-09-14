@@ -36,7 +36,7 @@
 
   <!-- Keep this version in sync with BenchmarkDefaults.BaselineNuGetVersion in BenchmarkConfigs.cs. -->
   <ItemGroup Condition=" '$(Configuration)' != 'LocalBuild' ">
-    <PackageReference Include="FastBertTokenizer" Version="1.0.28" />
+    <PackageReference Include="FastBertTokenizer" Version="1.2.6" />
   </ItemGroup>
 
   <ItemGroup>
