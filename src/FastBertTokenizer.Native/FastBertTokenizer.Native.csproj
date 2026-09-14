@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <NativeLib>Shared</NativeLib>
+    <!-- Publishes FastBertTokenizer.Native.so / .dylib / .dll depending on the target platform. -->
+    <RootNamespace>FastBertTokenizer.Native</RootNamespace>
+    <OptimizationPreference>Speed</OptimizationPreference>
+    <IsPackable>false</IsPackable>
+    <!-- The C ABI's parameter semantics are documented in the conventions block and per-function
+         summaries in NativeExports.cs; per-parameter XML docs would just duplicate that. -->
+    <NoWarn>$(NoWarn);SA1611;SA1615</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../FastBertTokenizer/FastBertTokenizer.csproj" />
+  </ItemGroup>
+
+</Project>
