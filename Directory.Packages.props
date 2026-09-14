@@ -11,9 +11,6 @@
     <GlobalPackageReference Include="StyleCop.Analyzers.Unstable" Version="1.2.0.556" />
   </ItemGroup>
   <ItemGroup>
-    <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <!-- Referenced explicitly by net48-targeting projects: whether the SDK injects this
          automatically depends on OS and SDK version, which breaks locked-mode restore
