@@ -1,15 +1,4 @@
-<p align="center" id="toplogo">
-  <a href="https://www.nuget.org/packages/FastBertTokenizer/">
-    <!-- https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#specifying-the-theme-an-image-is-shown-to -->
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="logo-darkmode.svg">
-      <source media="(prefers-color-scheme: light)" srcset="logo.svg">
-      <img alt="FastBertTokenizer Logo" src="logo.svg" width="100">
-    </picture>
-  </a>
-</p>
-
-# FastBertTokenizer
+# ![FastBertTokenizer logo](https://raw.githubusercontent.com/georg-jung/FastBertTokenizer/master/logo.svg) FastBertTokenizer
 
 [![NuGet version (FastBertTokenizer)](https://img.shields.io/nuget/v/FastBertTokenizer.svg?style=flat)](https://www.nuget.org/packages/FastBertTokenizer/)
 [![Docs](https://img.shields.io/badge/Docs-fastberttokenizer.gjung.com-blue)](https://fastberttokenizer.gjung.com/)
