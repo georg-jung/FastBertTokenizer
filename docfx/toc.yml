@@ -1,4 +1,6 @@
 - name: API
   href: api/
+- name: Release Notes
+  href: https://github.com/georg-jung/FastBertTokenizer/releases
 - name: GitHub Repository
   href: https://github.com/georg-jung/FastBertTokenizer
