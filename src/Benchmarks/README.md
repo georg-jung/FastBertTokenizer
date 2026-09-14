@@ -90,7 +90,7 @@ AMD EPYC 7763 2.45GHz, 1 CPU, 4 logical and 2 physical cores (GitHub Actions sha
 ### FastBertTokenizer usage patterns: .NET 8 vs. .NET 10
 
 * Workload: Encode up to 512 tokens from each of the 15,000 articles (3,657,145 tokens produced).
-* ~14.5m tokens/s single threaded, ~36m tokens/s multi threaded on the runner's 4 vCPUs.
+* ~14.5m tokens/s single threaded, ~35.3m tokens/s multi threaded on the runner's 4 vCPUs.
 * `local` jobs measure the working tree built from source, `nuget` jobs the released baseline package.
 
 | Method                       | Job                  | Runtime   | Mean     | Error   | StdDev  | Ratio | Allocated    | Alloc Ratio |
