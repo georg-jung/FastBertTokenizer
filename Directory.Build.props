@@ -36,6 +36,9 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
     <Deterministic>true</Deterministic>
+    <!-- Applies to every build on GitHub Actions, not only to commands that pass it explicitly. Among others, this maps
+         source paths in PDBs to /_/, so the output doesn't depend on the directory the repo was checked out to. -->
+    <ContinuousIntegrationBuild Condition=" '$(GITHUB_ACTIONS)' == 'true' ">true</ContinuousIntegrationBuild>
     <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
 
     <!-- https://devblogs.microsoft.com/nuget/enable-repeatable-package-restores-using-a-lock-file/ -->
@@ -59,6 +62,16 @@
     <PropertyGroup>
       <!-- TEMPLATE USER: replace the ORG/REPO (or entire link) below and uncomment. -->
       <PackageReleaseNotes>https://github.com/georg-jung/FastBertTokenizer/releases/tag/v$(Version)</PackageReleaseNotes>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Deterministic pack (NuGet 7.9+) stamps every file in a package with DeterministicTimestamp, which defaults to the
+       current time. Use the commit date instead, so packing the same commit always yields byte-identical packages. -->
+  <Target Name="SetDeterministicPackTimestamp" BeforeTargets="GenerateNuspec" DependsOnTargets="GetBuildVersion"
+          Condition=" '$(Deterministic)' == 'true' and '$(DeterministicTimestamp)' == '' and '$(SOURCE_DATE_EPOCH)' == '' ">
+    <PropertyGroup Condition=" '$(GitCommitDateTicks)' != '' ">
+      <!-- Unix time in seconds -->
+      <DeterministicTimestamp>$([MSBuild]::Divide($([MSBuild]::Subtract($(GitCommitDateTicks), 621355968000000000)), 10000000))</DeterministicTimestamp>
     </PropertyGroup>
   </Target>
 
