@@ -53,6 +53,19 @@ public class Decode : IAsyncLifetime
     }
 
     [Fact]
+    public void ObsoleteDecodeOverloadHonorsCleanupTokenizationSpacesArgument()
+    {
+        var (inputIds, _, _) = _uut.Encode("Hello, world. It's fine.");
+        var ids = inputIds.Span;
+
+        _uut.Decode(ids).ShouldContain("hello, world. it's fine.");
+#pragma warning disable CS0618 // Type or member is obsolete
+        _uut.Decode(ids, cleanupTokenizationSpaces: true).ShouldBe(_uut.Decode(ids));
+        _uut.Decode(ids, cleanupTokenizationSpaces: false).ShouldContain("hello , world . it ' s fine .");
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    [Fact]
     public void DecodeEmpty()
     {
         long[] empty = [];

@@ -45,14 +45,17 @@ public partial class BertTokenizer
         LoadTokenizerJsonImpl(tok);
     }
 
-#if !NETSTANDARD2_0
     internal async Task LoadTokenizerJsonAsync(HttpClient httpClient, string url)
     {
+#if !NETSTANDARD2_0
         var tok = await httpClient.GetFromJsonAsync(url, TokenizerJsonContext.Default.TokenizerJson)
             ?? throw new ArgumentException("Tokenizer configuration could not be deserialised.");
         LoadTokenizerJsonImpl(tok);
-    }
+#else
+        using var stream = await httpClient.GetStreamAsync(url);
+        await LoadTokenizerJsonAsync(stream);
 #endif
+    }
 
 #pragma warning restore CS1573 // Parameter besitzt kein übereinstimmendes param-Tag im XML-Kommentar (andere Parameter jedoch schon)
 
