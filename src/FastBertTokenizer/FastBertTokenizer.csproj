@@ -25,7 +25,7 @@ Fast and memory-efficient WordPiece tokenizer as it is used by BERT and others. 
     <PackageReadmeFile>README.md</PackageReadmeFile>
 
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>1.0.12-beta</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>1.0.28</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>
