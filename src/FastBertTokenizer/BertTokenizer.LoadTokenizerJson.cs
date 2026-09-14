@@ -1,9 +1,6 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#if NET8_0_OR_GREATER
-using System.Collections.Frozen;
-#endif
 #if !NETSTANDARD2_0
 using System.Net.Http.Json;
 #endif
@@ -166,20 +163,7 @@ public partial class BertTokenizer
         }
 
         _preTokenizer = new(tok.AddedTokens.Select(x => (x.Content, x.Normalized)).OrderByDescending(x => x.Content.Length));
-        _maxPrefixLength = MaxKeyLength(prefixes);
-        _maxSuffixLength = MaxKeyLength(suffixes);
-
-#if NET8_0_OR_GREATER
-        _prefixes = prefixes.ToFrozenDictionary();
-        _suffixes = suffixes.ToFrozenDictionary();
-#else
-        _prefixes = prefixes;
-        _suffixes = suffixes;
-#endif
-#if NET9_0_OR_GREATER
-        _prefixLookup = _prefixes.GetAlternateLookup<ReadOnlySpan<char>>();
-        _suffixLookup = _suffixes.GetAlternateLookup<ReadOnlySpan<char>>();
-#endif
+        SetVocabulary(prefixes, suffixes);
         _lowercaseInput = tok.Normalizer.Lowercase;
 
         // https://huggingface.co/docs/tokenizers/python/latest/api/reference.html#module-tokenizers.normalizers

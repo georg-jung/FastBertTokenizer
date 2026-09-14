@@ -1,10 +1,6 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#if NET8_0_OR_GREATER
-using System.Collections.Frozen;
-#endif
-
 using System.Text;
 
 namespace FastBertTokenizer;
@@ -147,20 +143,7 @@ public partial class BertTokenizer
             _cls = (clsId ?? throw new InvalidOperationException($"Vocabulary does not contain cls token {clsToken}."), clsToken);
             _sep = (sepId ?? throw new InvalidOperationException($"Vocabulary does not contain sep token {sepToken}."), sepToken);
             _pad = (padId ?? throw new InvalidOperationException($"Vocabulary does not contain pad token {padToken}."), padToken);
-            _maxPrefixLength = MaxKeyLength(prefixes);
-            _maxSuffixLength = MaxKeyLength(suffixes);
-
-#if NET8_0_OR_GREATER
-            _prefixes = prefixes.ToFrozenDictionary();
-            _suffixes = suffixes.ToFrozenDictionary();
-#else
-            _prefixes = prefixes;
-            _suffixes = suffixes;
-#endif
-#if NET9_0_OR_GREATER
-            _prefixLookup = _prefixes.GetAlternateLookup<ReadOnlySpan<char>>();
-            _suffixLookup = _suffixes.GetAlternateLookup<ReadOnlySpan<char>>();
-#endif
+            SetVocabulary(prefixes, suffixes);
             _lowercaseInput = convertInputToLowercase;
             _decoderPrefix = VocabTxtDefaultContinuingSubwordPrefix;
             _normalization = normalization;

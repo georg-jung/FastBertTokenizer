@@ -611,40 +611,59 @@ public partial class BertTokenizer
         return cnt;
     }
 
+    /// <summary>
+    /// Sets the vocabulary to encode with: the lookup for tokens that can start a word, the one for tokens
+    /// that can continue one, and the length of the longest entry of each, which is the length
+    /// <see cref="TokenizeSubword"/> starts matching at.
+    /// </summary>
+    /// <param name="prefixes">Tokens that can start a word.</param>
+    /// <param name="suffixes">Tokens that can continue a word, without the continuing subword prefix.</param>
 #if NET9_0_OR_GREATER
-    /// <summary>
-    /// Determines the length of the longest key of the given vocabulary dictionary.
-    /// </summary>
-    /// <param name="dict">The dictionary to inspect.</param>
-    /// <returns>The length of the longest key, or 0 if the dictionary is empty.</returns>
-    private static int MaxKeyLength(Dictionary<string, long> dict)
-    {
-        var max = 0;
-        foreach (var key in dict.Keys)
-        {
-            max = Math.Max(max, key.Length);
-        }
-
-        return max;
-    }
+    private void SetVocabulary(Dictionary<string, long> prefixes, Dictionary<string, long> suffixes)
 #else
+    private void SetVocabulary(Dictionary<StringSpanOrdinalKey, long> prefixes, Dictionary<StringSpanOrdinalKey, long> suffixes)
+#endif
+    {
+        _maxPrefixLength = MaxKeyLength(prefixes);
+        _maxSuffixLength = MaxKeyLength(suffixes);
+
+#if NET8_0_OR_GREATER
+        _prefixes = prefixes.ToFrozenDictionary();
+        _suffixes = suffixes.ToFrozenDictionary();
+#else
+        _prefixes = prefixes;
+        _suffixes = suffixes;
+#endif
+#if NET9_0_OR_GREATER
+        _prefixLookup = _prefixes.GetAlternateLookup<ReadOnlySpan<char>>();
+        _suffixLookup = _suffixes.GetAlternateLookup<ReadOnlySpan<char>>();
+#endif
+    }
+
     /// <summary>
     /// Determines the length of the longest key of the given vocabulary dictionary.
     /// </summary>
     /// <param name="dict">The dictionary to inspect.</param>
     /// <returns>The length of the longest key, or 0 if the dictionary is empty.</returns>
+#if NET9_0_OR_GREATER
+    private static int MaxKeyLength(Dictionary<string, long> dict)
+#else
     private static int MaxKeyLength(Dictionary<StringSpanOrdinalKey, long> dict)
+#endif
     {
         var max = 0;
         foreach (var key in dict.Keys)
         {
+#if NET9_0_OR_GREATER
+            max = Math.Max(max, key.Length);
+#else
             // Keys that are stored in the dictionary are always string-backed; only lookups use the span-backed form.
             max = Math.Max(max, key.Data!.Length);
+#endif
         }
 
         return max;
     }
-#endif
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool TryGetPrefixId(ReadOnlySpan<char> prefix, out long id)
