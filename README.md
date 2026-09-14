@@ -53,7 +53,7 @@ Note: FastBertTokenizer currently does not support encoding two pieces of text i
 
 ## Speed / Benchmarks
 
-> tl;dr: FastBertTokenizer can encode 1 GB of text in around 2 s on a typical notebook CPU from 2020 (measured multi-threaded on a ThinkPad T14s Gen 1, AMD Ryzen 7 PRO 4750U, with v1.x: ~51 ms for the ~26 MB benchmark corpus on .NET 8).
+> tl;dr: FastBertTokenizer encodes ~14.5 million tokens per second on a single core, enough to tokenize a full-length novel in under 10 ms. Batched across the 4 vCPUs of a GitHub Actions runner, that grows to ~35 million tokens per second.
 
 Market overview from [a full CI run](https://github.com/georg-jung/FastBertTokenizer/actions/runs/34832739276) (GitHub Actions shared runner, `ubuntu-24.04`, 4 vCPUs): tokenizing 15,000 simple english wikipedia articles (3,657,145 tokens) with bert-base-uncased's vocabulary, truncated to 512 tokens per input. For FastBertTokenizer that is ~14.5m tokens/s single threaded and ~35.3m tokens/s multi threaded.
 
