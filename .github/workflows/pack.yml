@@ -1,5 +1,12 @@
 name: Pack
 
+# Releasing:
+#   1. Push a version tag, e.g. `nbgv tag release/v1.3` and `git push origin v1.3.4`. The run for the tag builds the
+#      package, attests its build provenance and creates a draft GitHub release with the packages attached.
+#   2. Add the release notes to the draft and publish it, e.g. `gh release edit v1.3.4 --notes-file notes.md --draft=false`.
+#      Releases are immutable, so publishing locks the tag and the attached packages.
+#   3. Publishing triggers another run, which pushes exactly the attached, attested packages to nuget.org and deploys the docs.
+
 on:
   workflow_call:
     inputs:
@@ -13,7 +20,6 @@ on:
         required: false
         default: "no"
   push:
-  # A published release deploys docfx to GitHub Pages, attests the package's build provenance and pushes it to nuget.org
   release:
     types: [published]
 
@@ -68,10 +74,10 @@ jobs:
         path: bin/Packages/Release/**/*
 
   #########################################################################
-  # ATTEST Job (runs only on a published release)
+  # ATTEST Job (runs only for pushed version tags)
   #########################################################################
   attest:
-    if: ${{ github.event_name == 'release' }}
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
 
     name: Attest build provenance
     runs-on: ubuntu-24.04
@@ -84,17 +90,17 @@ jobs:
       attestations: write
 
     steps:
-      - name: Download nupkg artifact
+      - name: Download package artifact
         uses: actions/download-artifact@v8
         with:
           name: FastBertTokenizer-nupkg-${{ needs.build.outputs.doc_version }}
-          path: nupkg
+          path: packages
 
       # nuget.org adds a repository signature to every package, which changes the .nupkg's hash.
       # The assemblies inside stay byte-identical, so attest them too to keep downloads from nuget.org verifiable.
       - name: Extract assemblies
         run: |
-          for pkg in nupkg/*.nupkg; do
+          for pkg in packages/*.nupkg; do
             unzip -q "$pkg" 'lib/*/FastBertTokenizer.dll' -d assemblies
           done
 
@@ -102,8 +108,52 @@ jobs:
         uses: actions/attest@v4
         with:
           subject-path: |
-            nupkg/*.nupkg
+            packages/*.nupkg
+            packages/*.snupkg
             assemblies/lib/*/FastBertTokenizer.dll
+
+  #########################################################################
+  # DRAFT Release Job (runs only for pushed version tags)
+  #########################################################################
+  draft-release:
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+
+    name: Create draft release
+    runs-on: ubuntu-24.04
+    needs: [build, attest]
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download package artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: FastBertTokenizer-nupkg-${{ needs.build.outputs.doc_version }}
+          path: packages
+
+      # Assets can only be attached before publishing, as releases are immutable.
+      # A re-run replaces the assets of an existing draft, but never touches a published release.
+      - name: Create draft release with packages attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          draft=$(gh api "repos/$GH_REPO/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | .draft")
+          if [ -z "$draft" ]; then
+            prerelease=()
+            if [[ "$TAG" == *-* ]]; then
+              prerelease=(--prerelease)
+            fi
+            gh release create "$TAG" packages/* --draft --verify-tag --title "$TAG" \
+              --notes "Add the release notes before publishing." "${prerelease[@]}"
+          elif [ "$draft" = "true" ]; then
+            gh release upload "$TAG" packages/* --clobber
+          else
+            echo "::error::Release $TAG is already published; its assets can't be changed."
+            exit 1
+          fi
 
   #########################################################################
   # PUBLISH NuGet Job (runs only on a published release)
@@ -113,7 +163,6 @@ jobs:
 
     name: Publish to nuget.org
     runs-on: ubuntu-24.04
-    needs: [build, attest]
 
     # The nuget.org trusted publishing policy is restricted to this environment.
     environment: nuget
@@ -121,13 +170,28 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      attestations: read
 
     steps:
-      - name: Download nupkg artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: FastBertTokenizer-nupkg-${{ needs.build.outputs.doc_version }}
-          path: nupkg
+      # Publish exactly what is attached to the immutable release, not a rebuild of it.
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release download "$TAG" --pattern '*.nupkg' --pattern '*.snupkg' --dir packages
+
+      - name: Verify build provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          for pkg in packages/*; do
+            gh attestation verify "$pkg" --repo "$GH_REPO" \
+              --signer-workflow "$GH_REPO/.github/workflows/pack.yml" \
+              --source-ref "refs/tags/$TAG"
+          done
 
       - name: Setup dotnet
         uses: actions/setup-dotnet@v6
@@ -141,10 +205,11 @@ jobs:
         with:
           user: georgjung
 
+      # Pushes the .snupkg next to each .nupkg along with it.
       - name: Push to nuget.org
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
-        run: dotnet nuget push "nupkg/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push "packages/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
   #########################################################################
   # DEPLOY Docs Job (runs only if release event OR if "docs: yes" manually)
