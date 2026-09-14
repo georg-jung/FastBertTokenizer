@@ -13,7 +13,7 @@ on:
         required: false
         default: "no"
   push:
-  # Deploy automatically on a new release, automatically publishes docfx to GitHub Pages
+  # A published release deploys docfx to GitHub Pages, attests the package's build provenance and pushes it to nuget.org
   release:
     types: [published]
 
@@ -24,7 +24,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
@@ -61,23 +61,90 @@ jobs:
     # To be sure we don't pack the docfx build, this comes after docfx
     - run: dotnet build src/FastBertTokenizer/FastBertTokenizer.csproj -c Release --no-restore /p:ContinuousIntegrationBuild=true
 
-    # Remove the html head with the logo from README for nupkg
-    - id: clean-readme
-      uses: sean0x42/markdown-extract@v2
-      with:
-        file: README.md
-        pattern: 'FastBertTokenizer'
-    - uses: "DamianReeves/write-file-action@master"
-      with:
-        path: README.md
-        write-mode: overwrite
-        contents: ${{ steps.clean-readme.outputs.markdown }}
-
     - run: dotnet pack src/FastBertTokenizer/FastBertTokenizer.csproj -c Release --no-restore --no-build /p:ContinuousIntegrationBuild=true
     - uses: actions/upload-artifact@v7
       with:
         name: FastBertTokenizer-nupkg-${{ steps.nbgv.outputs.SemVer2 }}
         path: bin/Packages/Release/**/*
+
+  #########################################################################
+  # ATTEST Job (runs only on a published release)
+  #########################################################################
+  attest:
+    if: ${{ github.event_name == 'release' }}
+
+    name: Attest build provenance
+    runs-on: ubuntu-24.04
+    needs: build
+
+    # Kept out of the build job, so no step that builds the package can request an OIDC token.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Download nupkg artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: FastBertTokenizer-nupkg-${{ needs.build.outputs.doc_version }}
+          path: nupkg
+
+      # nuget.org adds a repository signature to every package, which changes the .nupkg's hash.
+      # The assemblies inside stay byte-identical, so attest them too to keep downloads from nuget.org verifiable.
+      - name: Extract assemblies
+        run: |
+          for pkg in nupkg/*.nupkg; do
+            unzip -q "$pkg" 'lib/*/FastBertTokenizer.dll' -d assemblies
+          done
+
+      - name: Generate build provenance attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            nupkg/*.nupkg
+            assemblies/lib/*/FastBertTokenizer.dll
+
+  #########################################################################
+  # PUBLISH NuGet Job (runs only on a published release)
+  #########################################################################
+  publish-nuget:
+    if: ${{ github.event_name == 'release' }}
+
+    name: Publish to nuget.org
+    runs-on: ubuntu-24.04
+    needs: [build, attest]
+
+    # The nuget.org trusted publishing policy is restricted to this environment.
+    environment: nuget
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download nupkg artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: FastBertTokenizer-nupkg-${{ needs.build.outputs.doc_version }}
+          path: nupkg
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # https://learn.microsoft.com/nuget/nuget-org/trusted-publishing
+      - name: NuGet login (OIDC → temporary API key)
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: georgjung
+
+      - name: Push to nuget.org
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "nupkg/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
   #########################################################################
   # DEPLOY Docs Job (runs only if release event OR if "docs: yes" manually)
@@ -90,7 +157,7 @@ jobs:
     if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.docs == 'yes') }}
 
     name: Deploy docfx to GitHub Pages
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build
 
     # Pages deployment requires these permissions
