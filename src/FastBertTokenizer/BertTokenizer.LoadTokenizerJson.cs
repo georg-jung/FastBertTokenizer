@@ -105,13 +105,8 @@ public partial class BertTokenizer
         var sepToken = sepSpecialToken.Id;
         var padToken = "[PAD]"; // In e.g. https://huggingface.co/bert-base-uncased/raw/main/tokenizer.json there is no nice way to detect this.
 
-#if NET9_0_OR_GREATER
-        var prefixes = new Dictionary<string, long>();
-        var suffixes = new Dictionary<string, long>();
-#else
-        var prefixes = new Dictionary<StringSpanOrdinalKey, long>();
-        var suffixes = new Dictionary<StringSpanOrdinalKey, long>();
-#endif
+        var prefixes = new Dictionary<string, int>();
+        var suffixes = new Dictionary<string, int>();
         (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
 
         void HandleLine(string line, int tokenId)

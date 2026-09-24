@@ -64,13 +64,8 @@ public partial class BertTokenizer
             throw new InvalidOperationException("Vocabulary already loaded.");
         }
 
-#if NET9_0_OR_GREATER
-        var prefixes = new Dictionary<string, long>();
-        var suffixes = new Dictionary<string, long>();
-#else
-        var prefixes = new Dictionary<StringSpanOrdinalKey, long>();
-        var suffixes = new Dictionary<StringSpanOrdinalKey, long>();
-#endif
+        var prefixes = new Dictionary<string, int>();
+        var suffixes = new Dictionary<string, int>();
         (int? unkId, int? clsId, int? sepId, int? padId) = (null, null, null, null);
         var i = 0;
 

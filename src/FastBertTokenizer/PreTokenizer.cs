@@ -15,6 +15,19 @@ namespace FastBertTokenizer;
 /// </summary>
 internal class PreTokenizer
 {
+    /// <summary>
+    /// A cache of the classes of non-ASCII chars that don't depend on the added tokens, indexed by char and shared by all
+    /// instances. It is filled lazily: <see cref="CharClass.NonAscii"/> is set in all entries that were already computed.
+    /// Concurrent writes are benign, as all of them write the same value.
+    /// </summary>
+    private static readonly CharClass[] NonAsciiCharClasses = new CharClass[char.MaxValue + 1];
+
+    /// <summary>
+    /// A cache of <see cref="char.ToLowerInvariant(char)"/> for non-ASCII chars, indexed by char and shared by all instances.
+    /// It is filled lazily: entries that were not computed yet are 0. Concurrent writes are benign, as all of them write the same value.
+    /// </summary>
+    private static readonly char[] NonAsciiLowercase = new char[char.MaxValue + 1];
+
     private readonly (string Content, bool Normalize)[] _addedTokens;
 #if NET8_0_OR_GREATER
     private readonly SearchValues<char> _addedTokenFirstLetters;
@@ -22,6 +35,7 @@ internal class PreTokenizer
     private readonly char[] _addedTokenFirstLetters;
 #endif
     private readonly CharClass[] _asciiCharClasses;
+    private readonly bool _hasNonAsciiAddedTokenFirstLetters;
 
     public PreTokenizer(IEnumerable<(string Content, bool Normalize)> addedTokens)
     {
@@ -29,16 +43,17 @@ internal class PreTokenizer
 
         // This logic might not be perfect. Are there chars that are equal to others in an invariant case insesitive comparison
         // but are neither the upper nor the lower variant of the original?
-        var firstLettersToSearch = addedTokens
+        char[] firstLettersToSearch = [.. addedTokens
             .SelectMany(x => x.Normalize
                 ? (IEnumerable<char>)[x.Content[0], char.ToLowerInvariant(x.Content[0]), char.ToUpperInvariant(x.Content[0])]
                 : [x.Content[0]])
-            .Distinct();
+            .Distinct()];
 #if NET8_0_OR_GREATER
-        _addedTokenFirstLetters = SearchValues.Create([.. firstLettersToSearch]);
+        _addedTokenFirstLetters = SearchValues.Create(firstLettersToSearch);
 #else
-        _addedTokenFirstLetters = [.. firstLettersToSearch];
+        _addedTokenFirstLetters = firstLettersToSearch;
 #endif
+        _hasNonAsciiAddedTokenFirstLetters = firstLettersToSearch.Any(c => c >= 128);
 
         // ClassifySlow reads _addedTokenFirstLetters, so the table must be filled after it is assigned.
         _asciiCharClasses = new CharClass[128];
@@ -46,11 +61,25 @@ internal class PreTokenizer
         {
             _asciiCharClasses[i] = ClassifySlow((char)i);
         }
+
+        for (var c = 'A'; c <= 'Z'; c++)
+        {
+            _asciiCharClasses[c] |= CharClass.AsciiUppercase;
+        }
+
+        AsciiAlphanumericsAreWordChars = true;
+        for (var c = '0'; c <= 'z'; c++)
+        {
+            if (char.IsLetterOrDigit(c) && (_asciiCharClasses[c] & ~CharClass.AsciiUppercase) != CharClass.Word)
+            {
+                AsciiAlphanumericsAreWordChars = false;
+            }
+        }
     }
 
     /// <summary>
     /// How <see cref="PreTokenizingEnumerator"/> handles a single char. Whitespace and Punctuation are mutually exclusive,
-    /// MayStartAddedToken is independent of both.
+    /// MayStartAddedToken is independent of both. AsciiUppercase and NonAscii just tell how to lowercase a word.
     /// </summary>
     [Flags]
     internal enum CharClass : byte
@@ -66,6 +95,64 @@ internal class PreTokenizer
 
         /// <summary>The char is a first letter of one of the added tokens, thus an added token might start here.</summary>
         MayStartAddedToken = 4,
+
+        /// <summary>The char is an ASCII uppercase letter, i.e. lowercasing changes it.</summary>
+        AsciiUppercase = 8,
+
+        /// <summary>The char is not ASCII, i.e. it is not classified by the ASCII lookup table.</summary>
+        NonAscii = 16,
+
+        /// <summary>The classes that end a word.</summary>
+        EndsWord = Whitespace | Punctuation | MayStartAddedToken,
+    }
+
+    /// <summary>
+    /// Gets the classes of the ASCII chars, indexed by char. Chars that are not contained in this table need to be
+    /// classified by <see cref="ClassifyNonAscii(char)"/>.
+    /// </summary>
+    public CharClass[] AsciiCharClasses => _asciiCharClasses;
+
+    /// <summary>
+    /// Gets a value indicating whether all ASCII letters and digits are plain word chars, i.e. none of them might start an added token.
+    /// </summary>
+    public bool AsciiAlphanumericsAreWordChars { get; }
+
+    /// <summary>
+    /// Lowercases the given chars like <see cref="MemoryExtensions.ToLowerInvariant(ReadOnlySpan{char}, Span{char})"/> does,
+    /// but char by char using a cache. This yields the same result as long as there are no surrogate pairs, which are
+    /// lowercased as a whole.
+    /// </summary>
+    /// <param name="source">The chars to lowercase.</param>
+    /// <param name="destination">Where to write the lowercased chars to. Must be at least as long as <paramref name="source"/>.</param>
+    /// <returns>False if <paramref name="source"/> contains surrogates. <paramref name="destination"/> is incomplete then.</returns>
+    public static bool TryToLowerInvariantWithoutSurrogates(ReadOnlySpan<char> source, Span<char> destination)
+    {
+        var lowercase = NonAsciiLowercase;
+        for (var i = 0; i < source.Length; i++)
+        {
+            var c = source[i];
+            if (c < 128)
+            {
+                destination[i] = (char)(c | ((uint)(c - 'A') <= 'Z' - 'A' ? 0x20 : 0));
+                continue;
+            }
+
+            if (char.IsSurrogate(c))
+            {
+                return false;
+            }
+
+            var lower = lowercase[c];
+            if (lower == 0)
+            {
+                lower = char.ToLowerInvariant(c);
+                lowercase[c] = lower;
+            }
+
+            destination[i] = lower;
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -90,7 +177,29 @@ internal class PreTokenizer
         // ASCII chars typically make up the vast majority of the input. For them, this single lookup replaces the
         // whitespace, punctuation, chinese char and added token first letter checks that all other chars go through.
         var asciiCharClasses = _asciiCharClasses;
-        return c < asciiCharClasses.Length ? asciiCharClasses[c] : ClassifySlow(c);
+        return c < asciiCharClasses.Length ? asciiCharClasses[c] : ClassifyNonAscii(c);
+    }
+
+    /// <summary>
+    /// Determines how <see cref="PreTokenizingEnumerator"/> handles the given char, which is not contained in <see cref="AsciiCharClasses"/>.
+    /// </summary>
+    /// <param name="c">Char to classify.</param>
+    /// <returns>The class of the given char.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CharClass ClassifyNonAscii(char c)
+    {
+        var res = NonAsciiCharClasses[c];
+        if (res == 0)
+        {
+            res = ClassifyNonAsciiUncached(c);
+        }
+
+        if (_hasNonAsciiAddedTokenFirstLetters && _addedTokenFirstLetters.Contains(c))
+        {
+            res |= CharClass.MayStartAddedToken;
+        }
+
+        return res;
     }
 
     /// <summary>
@@ -182,19 +291,38 @@ internal class PreTokenizer
     }
 
     /// <summary>
-    /// The predicate based classification that <see cref="Classify"/> uses for non-ASCII chars
-    /// and that the ASCII table is filled from.
+    /// Classifies the given non-ASCII char apart from whether it might start an added token, and caches the result.
     /// </summary>
     /// <param name="c">Char to classify.</param>
     /// <returns>The class of the given char.</returns>
-    private CharClass ClassifySlow(char c)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static CharClass ClassifyNonAsciiUncached(char c)
     {
-        var res = char.IsWhiteSpace(c)
+        var res = ClassifyWithoutAddedTokens(c) | CharClass.NonAscii;
+        NonAsciiCharClasses[c] = res;
+        return res;
+    }
+
+    /// <summary>
+    /// The predicate based classification of a char, apart from whether it might start an added token.
+    /// </summary>
+    /// <param name="c">Char to classify.</param>
+    /// <returns>The class of the given char.</returns>
+    private static CharClass ClassifyWithoutAddedTokens(char c)
+        => char.IsWhiteSpace(c)
             ? CharClass.Whitespace
             : IsPunctuation(c) || IsChineseCharacter(c)
                 ? CharClass.Punctuation
                 : CharClass.Word;
 
+    /// <summary>
+    /// The predicate based classification that the ASCII table is filled from.
+    /// </summary>
+    /// <param name="c">Char to classify.</param>
+    /// <returns>The class of the given char.</returns>
+    private CharClass ClassifySlow(char c)
+    {
+        var res = ClassifyWithoutAddedTokens(c);
         if (_addedTokenFirstLetters.Contains(c))
         {
             res |= CharClass.MayStartAddedToken;
