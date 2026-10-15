@@ -24,7 +24,7 @@
     <PackageReference Include="Nerdbank.GitVersioning" Version="3.10.94" />
     <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageReference Include="BlingFireNuget" Version="0.1.8" />
-    <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.1" />
     <PackageReference Include="Tokenizers.DotNet" Version="1.4.1" />
     <PackageReference Include="Tokenizers.DotNet.runtime.linux-x64" Version="1.4.1" />
     <PackageReference Include="Tokenizers.DotNet.runtime.win-x64" Version="1.4.1" />
@@ -36,7 +36,7 @@
 
   <!-- Keep this version in sync with BenchmarkDefaults.BaselineNuGetVersion in BenchmarkConfigs.cs. -->
   <ItemGroup Condition=" '$(Configuration)' != 'LocalBuild' ">
-    <PackageReference Include="FastBertTokenizer" Version="1.0.28" />
+    <PackageReference Include="FastBertTokenizer" Version="1.2.6" />
   </ItemGroup>
 
   <ItemGroup>
