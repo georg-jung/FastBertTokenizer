@@ -2,7 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+#if NET8_0_OR_GREATER
+using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+#endif
+using System.Runtime.InteropServices;
 using System.Text;
+using CharClass = FastBertTokenizer.PreTokenizer.CharClass;
 
 namespace FastBertTokenizer;
 
@@ -17,7 +24,6 @@ internal ref struct PreTokenizingEnumerator
     private readonly int _inputOffset;
     private readonly ReadOnlySpan<char> _input;
     private readonly PreTokenizer _preTokenizer;
-    private int start;
     private int currentIndex;
     private char[]? buffer = null;
 
@@ -42,12 +48,7 @@ internal ref struct PreTokenizingEnumerator
         _convertToLowercase = convertToLowercase;
         _preTokenizer = preTokenizer;
         _inputOffset = inputOffset;
-        start = -1;
         currentIndex = 0;
-        if (_convertToLowercase)
-        {
-            buffer = ArrayPool<char>.Shared.Rent(64);
-        }
     }
 
     public PreTokenizerResult Current { get; private set; }
@@ -56,55 +57,114 @@ internal ref struct PreTokenizingEnumerator
 
     public bool MoveNext()
     {
-        while (currentIndex < _input.Length)
+        // The fast path: ASCII chars that the lookup table fully classifies. Everything else, i.e. non-ASCII chars and
+        // chars that might start an added token, is handled by MoveNextSlow. This loop works on locals and doesn't
+        // call anything while they are needed, so that they can stay in registers.
+        var input = _input;
+        var asciiCharClasses = _preTokenizer.AsciiCharClasses;
+#if NET8_0_OR_GREATER
+        var asciiAlphanumericsAreWordChars = _preTokenizer.AsciiAlphanumericsAreWordChars;
+#endif
+        var i = currentIndex;
+
+        while (true)
         {
-            var c = _input[currentIndex];
-            var charClass = _preTokenizer.Classify(c);
-
-            if ((charClass & PreTokenizer.CharClass.MayStartAddedToken) != 0 && _preTokenizer.StartsWithAddedToken(_input.Slice(currentIndex)) is (int len, bool normalize))
+            if ((uint)i >= (uint)input.Length)
             {
-                if (Flush())
-                {
-                    return true;
-                }
+                currentIndex = i;
+                return false;
+            }
 
-                SetCurrent(_input.Slice(currentIndex, len), currentIndex, normalize);
-                currentIndex += len;
+            var c = input[i];
+            if (c >= asciiCharClasses.Length)
+            {
+                break;
+            }
+
+            var charClass = asciiCharClasses[c];
+            if ((charClass & CharClass.MayStartAddedToken) != 0)
+            {
+                break;
+            }
+
+            if ((charClass & CharClass.Whitespace) != 0)
+            {
+                i++;
+                continue;
+            }
+
+            if ((charClass & CharClass.Punctuation) != 0)
+            {
+                currentIndex = i + 1;
+                Current = new() { Segment = input.Slice(i, 1), SegmentStartIndex = i + _inputOffset };
                 return true;
             }
-            else if ((charClass & PreTokenizer.CharClass.Whitespace) != 0)
+
+            // A word starts at i. It ends before the next char that is whitespace, punctuation or the start of an added token.
+            var start = i;
+            var wordCharClasses = charClass;
+            i++;
+#if NET8_0_OR_GREATER
+            if (Vector128.IsHardwareAccelerated && asciiAlphanumericsAreWordChars)
             {
-                if (Flush())
+                // Skip the ASCII letters and digits of the word, eight chars at a time. The loop below then takes care
+                // of the char that ends this run and determines whether it ends the word too.
+                ref var inputStart = ref Unsafe.As<char, ushort>(ref MemoryMarshal.GetReference(input));
+                while (i <= input.Length - Vector128<ushort>.Count)
                 {
-                    currentIndex++;
-                    return true;
+                    var chars = Vector128.LoadUnsafe(ref inputStart, (nuint)i);
+                    var isLetterOrDigit = Vector128.LessThan(chars - Vector128.Create((ushort)'0'), Vector128.Create((ushort)10))
+                        | Vector128.LessThan((chars | Vector128.Create((ushort)0x20)) - Vector128.Create((ushort)'a'), Vector128.Create((ushort)26));
+                    var isUpper = Vector128.LessThan(chars - Vector128.Create((ushort)'A'), Vector128.Create((ushort)26));
+                    var letterOrDigitCount = BitOperations.TrailingZeroCount(~isLetterOrDigit.ExtractMostSignificantBits());
+                    if ((isUpper.ExtractMostSignificantBits() & ((1u << letterOrDigitCount) - 1)) != 0)
+                    {
+                        wordCharClasses |= CharClass.AsciiUppercase;
+                    }
+
+                    i += letterOrDigitCount;
+                    if (letterOrDigitCount < Vector128<ushort>.Count)
+                    {
+                        break;
+                    }
+                }
+            }
+#endif
+
+            var next = i;
+            while ((uint)i < (uint)input.Length)
+            {
+                c = input[i];
+                if (c >= asciiCharClasses.Length)
+                {
+                    return ContinueWordSlow(start, i, wordCharClasses);
                 }
 
-                currentIndex++;
-            }
-            else if ((charClass & PreTokenizer.CharClass.Punctuation) != 0)
-            {
-                if (Flush())
+                charClass = asciiCharClasses[c];
+                if ((charClass & CharClass.EndsWord) != 0)
                 {
-                    return true;
+                    if ((charClass & (CharClass.Whitespace | CharClass.Punctuation)) == 0)
+                    {
+                        return ContinueWordSlow(start, i, wordCharClasses);
+                    }
+
+                    // Whitespace that ends a word can be skipped right away, unless an added token might start with it.
+                    next = charClass == CharClass.Whitespace ? i + 1 : i;
+                    break;
                 }
 
-                Current = new() { Segment = _input.Slice(currentIndex, 1), SegmentStartIndex = currentIndex + _inputOffset };
-                currentIndex++;
-                return true;
+                wordCharClasses |= charClass;
+                i++;
+                next = i;
             }
-            else
-            {
-                if (start == -1)
-                {
-                    start = currentIndex;
-                }
 
-                currentIndex++;
-            }
+            currentIndex = next;
+            SetWord(input.Slice(start, i - start), start, wordCharClasses);
+            return true;
         }
 
-        return Flush();
+        currentIndex = i;
+        return MoveNextSlow();
     }
 
     public void Dispose()
@@ -116,43 +176,154 @@ internal ref struct PreTokenizingEnumerator
         }
     }
 
-    private bool Flush()
+    /// <summary>
+    /// Maps A-Z to a-z and copies all other chars as they are.
+    /// </summary>
+    /// <param name="source">The chars to lowercase, all of which must be ASCII.</param>
+    /// <param name="destination">Where to write the lowercased chars to. Must be as long as <paramref name="source"/>.</param>
+    private static void AsciiToLower(ReadOnlySpan<char> source, Span<char> destination)
     {
-        if (start != -1)
+        // Four chars at a time: 0x80 is set in the lanes of chars that are >= 'A' but not > 'Z'. As all chars are ASCII,
+        // no lane overflows into the next one.
+        var source4 = MemoryMarshal.Cast<char, ulong>(source);
+        var destination4 = MemoryMarshal.Cast<char, ulong>(destination);
+        for (var i = 0; i < source4.Length && i < destination4.Length; i++)
         {
-            var toProcess = _input.Slice(start, currentIndex - start);
-            SetCurrent(toProcess, start, true);
-
-            start = -1;
-            return true;
+            var chars = source4[i];
+            var isUpper = ((chars + 0x003F_003F_003F_003FUL) ^ (chars + 0x0025_0025_0025_0025UL)) & 0x0080_0080_0080_0080UL;
+            destination4[i] = chars | (isUpper >> 2);
         }
 
+        for (var i = source4.Length * 4; i < source.Length; i++)
+        {
+            var c = source[i];
+            destination[i] = (char)(c | ((uint)(c - 'A') <= 'Z' - 'A' ? 0x20 : 0));
+        }
+    }
+
+    /// <summary>
+    /// The general variant of <see cref="MoveNext"/> that handles all chars, including non-ASCII ones and added tokens.
+    /// </summary>
+    /// <returns>True if a segment was found.</returns>
+    private bool MoveNextSlow()
+    {
+        var input = _input;
+        var preTokenizer = _preTokenizer;
+        var i = currentIndex;
+        while ((uint)i < (uint)input.Length)
+        {
+            var charClass = preTokenizer.Classify(input[i]);
+            if ((charClass & CharClass.MayStartAddedToken) != 0 && preTokenizer.StartsWithAddedToken(input.Slice(i)) is (int len, bool normalize))
+            {
+                currentIndex = i + len;
+                SetCurrent(input.Slice(i, len), i, normalize);
+                return true;
+            }
+
+            if ((charClass & CharClass.Whitespace) != 0)
+            {
+                i++;
+                continue;
+            }
+
+            if ((charClass & CharClass.Punctuation) != 0)
+            {
+                currentIndex = i + 1;
+                Current = new() { Segment = input.Slice(i, 1), SegmentStartIndex = i + _inputOffset };
+                return true;
+            }
+
+            return ContinueWordSlow(i, i + 1, charClass);
+        }
+
+        currentIndex = i;
         return false;
     }
 
-    private void ExpandBuffer()
+    /// <summary>
+    /// Finds the end of the word that starts at <paramref name="start"/>, of which all chars before <paramref name="i"/>
+    /// are known to be word chars, and makes it <see cref="Current"/>.
+    /// </summary>
+    /// <param name="start">The index the word starts at.</param>
+    /// <param name="i">The index of the first char that is not yet known to belong to the word.</param>
+    /// <param name="wordCharClasses">The combined classes of the chars before <paramref name="i"/>.</param>
+    /// <returns>Always true.</returns>
+    private bool ContinueWordSlow(int start, int i, CharClass wordCharClasses)
     {
-        if (buffer is null)
+        var input = _input;
+        var preTokenizer = _preTokenizer;
+        while ((uint)i < (uint)input.Length)
         {
-            throw new ObjectDisposedException(nameof(PreTokenizingEnumerator));
+            var charClass = preTokenizer.Classify(input[i]);
+            if ((charClass & CharClass.EndsWord) != 0
+                && ((charClass & (CharClass.Whitespace | CharClass.Punctuation)) != 0 || preTokenizer.StartsWithAddedToken(input.Slice(i)) is not null))
+            {
+                break;
+            }
+
+            wordCharClasses |= charClass;
+            i++;
         }
 
-        var newLen = buffer!.Length * 2;
-        ArrayPool<char>.Shared.Return(buffer);
-        buffer = ArrayPool<char>.Shared.Rent(newLen);
+        currentIndex = i;
+        SetWord(input.Slice(start, i - start), start, wordCharClasses);
+        return true;
+    }
+
+    private Span<char> GetBuffer(int minLength)
+    {
+        if (buffer is null || buffer.Length < minLength)
+        {
+            if (buffer is not null)
+            {
+                ArrayPool<char>.Shared.Return(buffer);
+            }
+
+            buffer = ArrayPool<char>.Shared.Rent(Math.Max(64, minLength));
+        }
+
+        return buffer;
+    }
+
+    private void SetWord(ReadOnlySpan<char> word, int startIdx, CharClass wordCharClasses)
+    {
+        if (_convertToLowercase && (wordCharClasses & (CharClass.AsciiUppercase | CharClass.NonAscii)) != 0)
+        {
+            if ((wordCharClasses & CharClass.NonAscii) != 0)
+            {
+                var lowerNonAscii = GetBuffer(word.Length).Slice(0, word.Length);
+                if (PreTokenizer.TryToLowerInvariantWithoutSurrogates(word, lowerNonAscii))
+                {
+                    Current = new() { Segment = lowerNonAscii, SegmentStartIndex = startIdx + _inputOffset };
+                }
+                else
+                {
+                    SetCurrent(word, startIdx, true);
+                }
+
+                return;
+            }
+
+            // All chars are ASCII, thus ToLowerInvariant would just map A-Z to a-z.
+            var lower = GetBuffer(word.Length).Slice(0, word.Length);
+            AsciiToLower(word, lower);
+            Current = new() { Segment = lower, SegmentStartIndex = startIdx + _inputOffset };
+        }
+        else
+        {
+            // Words without uppercase ASCII and non-ASCII chars are lowercase already, no need to copy them.
+            Current = new() { Segment = word, SegmentStartIndex = startIdx + _inputOffset };
+        }
     }
 
     private void SetCurrent(ReadOnlySpan<char> toProcess, int currentStartIdx, bool canLowercase)
     {
         if (_convertToLowercase && canLowercase)
         {
-            int lowerLen;
-            while ((lowerLen = toProcess.ToLowerInvariant(buffer)) == -1)
-            {
-                ExpandBuffer();
-            }
-
-            Current = new() { Segment = buffer.AsSpan(0, lowerLen), SegmentStartIndex = currentStartIdx + _inputOffset };
+            // ToLowerInvariant maps every char to exactly one char, so it can't run out of space here.
+            var lower = GetBuffer(toProcess.Length);
+            var lowerLen = toProcess.ToLowerInvariant(lower);
+            Current = new() { Segment = lower.Slice(0, lowerLen), SegmentStartIndex = currentStartIdx + _inputOffset };
         }
         else
         {

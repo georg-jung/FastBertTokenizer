@@ -1,10 +1,6 @@
 // Copyright (c) Georg Jung. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#if NET8_0_OR_GREATER
-using System.Collections.Frozen;
-#endif
-
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -21,18 +17,8 @@ namespace FastBertTokenizer;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1204:Static elements should appear before instance elements", Justification = "Have private overload close to public one.")]
 public partial class BertTokenizer
 {
-#if NET9_0_OR_GREATER
-    private FrozenDictionary<string, long>? _prefixes;
-    private FrozenDictionary<string, long>? _suffixes;
-    private FrozenDictionary<string, long>.AlternateLookup<ReadOnlySpan<char>> _prefixLookup;
-    private FrozenDictionary<string, long>.AlternateLookup<ReadOnlySpan<char>> _suffixLookup;
-#elif NET8_0_OR_GREATER
-    private FrozenDictionary<StringSpanOrdinalKey, long>? _prefixes;
-    private FrozenDictionary<StringSpanOrdinalKey, long>? _suffixes;
-#else
-    private Dictionary<StringSpanOrdinalKey, long>? _prefixes;
-    private Dictionary<StringSpanOrdinalKey, long>? _suffixes;
-#endif
+    private VocabDictionary? _prefixes;
+    private VocabDictionary? _suffixes;
     private int _maxPrefixLength;
     private int _maxSuffixLength;
     private (int Id, string Token) _unk = default!;
@@ -51,6 +37,10 @@ public partial class BertTokenizer
     private long[]? _inputIdReturnBuffer = null;
     private long[]? _attentionMaskReturnBuffer = null;
     private long[]? _tokenTypeIdsReturnBuffer = null;
+
+    // The token ids that segments consisting of a single ASCII char, e.g. punctuation, are encoded to, indexed by the char.
+    // -1 for chars that are not encoded to exactly one token. Created on first use, after the vocabulary is loaded.
+    private long[]? _singleAsciiCharIds;
 
     /// <summary>
     /// Encode the given input string to token ids per the loaded vocabulary. Write the results to the
@@ -224,11 +214,24 @@ public partial class BertTokenizer
 
         lastTokenizedWordStartIndex = 0;
         bool moreRemainingInput = false;
+        var singleAsciiCharIds = Volatile.Read(ref _singleAsciiCharIds) ?? CreateSingleAsciiCharIds();
         foreach (var pivot in _preTokenizer.PreTokenize(input, _lowercaseInput, _normalization, inputOffset))
         {
             lastTokenizedWordStartIndex = pivot.SegmentStartIndex;
             var offset = 0;
-            var added = TokenizeSubword(pivot.Segment, inputIds.Slice(inputIdCnt, inputIds.Length - inputIdCnt), ref offset);
+            int added;
+            var segment = pivot.Segment;
+            if (segment.Length == 1 && segment[0] < singleAsciiCharIds.Length && singleAsciiCharIds[segment[0]] is var id and >= 0 && inputIdCnt < inputIds.Length)
+            {
+                // Shortcut for the most frequent segments, e.g. punctuation. Same result as TokenizeSubword.
+                inputIds[inputIdCnt] = id;
+                offset = 1;
+                added = 1;
+            }
+            else
+            {
+                added = TokenizeSubword(segment, inputIds.Slice(inputIdCnt, inputIds.Length - inputIdCnt), ref offset);
+            }
 
             // subword was/needs to be cut off because it was to long
             if (inputIdCnt + added + 1 > maximumTokens)
@@ -289,6 +292,35 @@ public partial class BertTokenizer
         }
 
         return (inputIdCnt, nonPaddedCnt);
+    }
+
+    /// <summary>
+    /// Encodes every single ASCII char on its own, to create <see cref="_singleAsciiCharIds"/>.
+    /// </summary>
+    /// <returns>The token id of each single ASCII char, or -1 if it isn't encoded to exactly one token.</returns>
+    private long[] CreateSingleAsciiCharIds()
+    {
+        var ids = new long[128];
+        Span<char> word = stackalloc char[1];
+        Span<long> tokenIds = stackalloc long[4];
+        for (var i = 0; i < ids.Length; i++)
+        {
+            word[0] = (char)i;
+            var offset = 0;
+            try
+            {
+                var cnt = TokenizeSubword(word, tokenIds, ref offset);
+                ids[i] = cnt == 1 && offset == 1 ? tokenIds[0] : -1;
+            }
+            catch (Exception)
+            {
+                // Leave it to TokenizeSubword to throw if the char actually occurs in an input.
+                ids[i] = -1;
+            }
+        }
+
+        // Concurrent callers create equal arrays; all of them continue with the one that is published first.
+        return Interlocked.CompareExchange(ref _singleAsciiCharIds, ids, null) ?? ids;
     }
 
     /// <summary>
@@ -514,6 +546,21 @@ public partial class BertTokenizer
 
     private int TokenizeSubword(ReadOnlySpan<char> word, Span<long> tokenIdSink, ref int offset)
     {
+        // Most words are contained in the vocabulary as a whole. Handle them here and everything else in a separate
+        // method, which keeps the code that is inlined into the callers small.
+        if (word.Length <= _maxPrefixLength && TryGetPrefixId(word, out var id))
+        {
+            tokenIdSink[0] = id;
+            offset += word.Length;
+            return 1;
+        }
+
+        return TokenizeSubwordPieces(word, tokenIdSink, ref offset);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private int TokenizeSubwordPieces(ReadOnlySpan<char> word, Span<long> tokenIdSink, ref int offset)
+    {
         int OnUnknown(ReadOnlySpan<char> word, Span<long> tokenIdSink, ref int offset)
         {
             if (RemoveControlAndReplacement(word, out var withoutControl))
@@ -556,7 +603,8 @@ public partial class BertTokenizer
         // Candidates longer than the longest entry in the vocabulary can never match, so start
         // shrinking at that length. Every failed lookup hashes the whole candidate, thus without
         // this cap a single word of length n costs O(n^2) char hashing before the first match.
-        var prefix = word.Slice(0, Math.Min(word.Length, _maxPrefixLength));
+        // If the word is not longer than that, TokenizeSubword already tried to match it as a whole.
+        var prefix = word.Slice(0, Math.Min(Math.Max(word.Length - 1, 0), _maxPrefixLength));
         var cnt = 0;
         long id = -1;
 
@@ -618,70 +666,27 @@ public partial class BertTokenizer
     /// </summary>
     /// <param name="prefixes">Tokens that can start a word.</param>
     /// <param name="suffixes">Tokens that can continue a word, without the continuing subword prefix.</param>
-#if NET9_0_OR_GREATER
-    private void SetVocabulary(Dictionary<string, long> prefixes, Dictionary<string, long> suffixes)
-#else
-    private void SetVocabulary(Dictionary<StringSpanOrdinalKey, long> prefixes, Dictionary<StringSpanOrdinalKey, long> suffixes)
-#endif
+    private void SetVocabulary(Dictionary<string, int> prefixes, Dictionary<string, int> suffixes)
     {
-        _maxPrefixLength = MaxKeyLength(prefixes);
-        _maxSuffixLength = MaxKeyLength(suffixes);
-
-#if NET8_0_OR_GREATER
-        _prefixes = prefixes.ToFrozenDictionary();
-        _suffixes = suffixes.ToFrozenDictionary();
-#else
-        _prefixes = prefixes;
-        _suffixes = suffixes;
-#endif
-#if NET9_0_OR_GREATER
-        _prefixLookup = _prefixes.GetAlternateLookup<ReadOnlySpan<char>>();
-        _suffixLookup = _suffixes.GetAlternateLookup<ReadOnlySpan<char>>();
-#endif
-    }
-
-    /// <summary>
-    /// Determines the length of the longest key of the given vocabulary dictionary.
-    /// </summary>
-    /// <param name="dict">The dictionary to inspect.</param>
-    /// <returns>The length of the longest key, or 0 if the dictionary is empty.</returns>
-#if NET9_0_OR_GREATER
-    private static int MaxKeyLength(Dictionary<string, long> dict)
-#else
-    private static int MaxKeyLength(Dictionary<StringSpanOrdinalKey, long> dict)
-#endif
-    {
-        var max = 0;
-        foreach (var key in dict.Keys)
-        {
-#if NET9_0_OR_GREATER
-            max = Math.Max(max, key.Length);
-#else
-            // Keys that are stored in the dictionary are always string-backed; only lookups use the span-backed form.
-            max = Math.Max(max, key.Data!.Length);
-#endif
-        }
-
-        return max;
+        _prefixes = new(prefixes);
+        _suffixes = new(suffixes);
+        _maxPrefixLength = _prefixes.MaxKeyLength;
+        _maxSuffixLength = _suffixes.MaxKeyLength;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool TryGetPrefixId(ReadOnlySpan<char> prefix, out long id)
     {
-#if NET9_0_OR_GREATER
-        return _prefixLookup.TryGetValue(prefix, out id);
-#else
-        return _prefixes!.TryGetValue(prefix, out id);
-#endif
+        var found = _prefixes!.TryGetValue(prefix, out var value);
+        id = value;
+        return found;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool TryGetSuffixId(ReadOnlySpan<char> suffix, out long id)
     {
-#if NET9_0_OR_GREATER
-        return _suffixLookup.TryGetValue(suffix, out id);
-#else
-        return _suffixes!.TryGetValue(suffix, out id);
-#endif
+        var found = _suffixes!.TryGetValue(suffix, out var value);
+        id = value;
+        return found;
     }
 }
