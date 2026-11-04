@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.ExceptionServices;
 
 namespace FastBertTokenizer;
 
@@ -74,6 +75,7 @@ public partial class BertTokenizer
         }
 
         using var cde = new CountdownEvent(ranges.Length);
+        Exception? exception = null;
         foreach (var range in ranges)
         {
 #if NETSTANDARD2_0
@@ -84,20 +86,35 @@ public partial class BertTokenizer
         }
 
         cde.Wait();
+        if (exception is not null)
+        {
+            ExceptionDispatchInfo.Capture(exception).Throw();
+        }
 
         void ParallelBody((int StartInclusive, int EndExclusive) param)
         {
-            var inputSpan = inputs.Span;
-            for (var i = param.StartInclusive; i < param.EndExclusive; i++)
+            // An exception escaping a ThreadPool.QueueUserWorkItem callback terminates the
+            // process, so capture it (first one wins) and rethrow on the calling thread.
+            try
             {
-                var startIdx = maximumTokens * i;
-                var (_, nonPad) = Encode(inputSpan[i], 0, inputIds.Slice(startIdx, maximumTokens).Span, out var _, maximumTokens);
-                var span = attentionMask.Slice(startIdx, maximumTokens).Span;
-                span.Slice(0, nonPad).Fill(1);
-                span.Slice(nonPad, maximumTokens - nonPad).Fill(0);
+                var inputSpan = inputs.Span;
+                for (var i = param.StartInclusive; i < param.EndExclusive; i++)
+                {
+                    var startIdx = maximumTokens * i;
+                    var (_, nonPad) = Encode(inputSpan[i], 0, inputIds.Slice(startIdx, maximumTokens).Span, out var _, maximumTokens);
+                    var span = attentionMask.Slice(startIdx, maximumTokens).Span;
+                    span.Slice(0, nonPad).Fill(1);
+                    span.Slice(nonPad, maximumTokens - nonPad).Fill(0);
+                }
             }
-
-            cde.Signal();
+            catch (Exception ex)
+            {
+                Interlocked.CompareExchange(ref exception, ex, null);
+            }
+            finally
+            {
+                cde.Signal();
+            }
         }
 
 #if NETSTANDARD2_0
